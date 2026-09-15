@@ -960,14 +960,21 @@ function initLiquidacion(){
 function initOmie(){
   const omie = DATA.omie;
   const kpiEl = document.getElementById('kpi-omie');
-  const prices = omie.map(r=>r.precio_medio).filter(v=>v!=null);
-  const avg = prices.reduce((a,b)=>a+b,0)/prices.length;
-  const max = Math.max(...prices), min = Math.min(...prices);
-  const negDays = omie.filter(r=>r.horas.some(h=>h!=null && h<0)).length;
   kpi(kpiEl, 'Rango de datos', fmtDate(omie[0].fecha)+' → '+fmtDate(omie[omie.length-1].fecha), omie.length+' días');
-  kpi(kpiEl, 'Precio medio del período', fmtEUR2(avg)+'/MWh', '', 'accent');
-  kpi(kpiEl, 'Precio máximo diario', fmtEUR2(max)+'/MWh');
-  kpi(kpiEl, 'Días con alguna hora en negativo', negDays, ((negDays/omie.length*100).toFixed(1))+'% de los días', 'critical');
+
+  const byYear = {};
+  omie.forEach(r=>{ const y = r.fecha.slice(0,4); (byYear[y] = byYear[y] || []).push(r); });
+  const years = Object.keys(byYear).sort().reverse();
+  years.forEach(y=>{
+    const rows = byYear[y];
+    const yPrices = rows.map(r=>r.precio_medio).filter(v=>v!=null);
+    const yAvg = yPrices.reduce((a,b)=>a+b,0)/yPrices.length;
+    const yMax = Math.max(...yPrices);
+    const yNeg = rows.filter(r=>r.horas.some(h=>h!=null && h<0)).length;
+    kpi(kpiEl, 'Precio medio '+y, fmtEUR2(yAvg)+'/MWh', rows.length+' días', 'accent');
+    kpi(kpiEl, 'Precio máximo diario '+y, fmtEUR2(yMax)+'/MWh');
+    kpi(kpiEl, 'Días con hora en negativo '+y, yNeg, ((yNeg/rows.length*100).toFixed(1))+'% de los días', 'critical');
+  });
 
   const labels = omie.map(r=>r.fecha);
   renderLineChart('chart-omie-diario', labels, omie.map(r=>r.precio_medio), {
