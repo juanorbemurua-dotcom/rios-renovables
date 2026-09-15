@@ -998,12 +998,14 @@ function initOmie(){
     if(v==null) return 'transparent';
     return bands.find(b=> v<=b.max).color;
   }
-  let html = '<div style="overflow-x:auto"><table style="border-collapse:collapse; font-size:10.5px; width:auto; min-width:0"><thead><tr><th style="text-align:left; padding:4px 6px; color:var(--muted); white-space:nowrap; width:1px">Mes</th>' +
+  let html = '<div style="overflow-x:auto"><table style="border-collapse:collapse; font-size:10.5px; width:100%; table-layout:fixed">' +
+    '<colgroup><col style="width:64px">' + Array.from({length:24},()=>'<col>').join('') + '</colgroup>' +
+    '<thead><tr><th style="text-align:left; padding:4px 6px; color:var(--muted); white-space:nowrap">Mes</th>' +
     Array.from({length:24},(_,h)=>`<th style="padding:2px 3px; color:var(--muted); font-weight:500">${h}h</th>`).join('') + '</tr></thead><tbody>';
   months.forEach((m,mi)=>{
     html += `<tr><td style="padding:3px 6px; white-space:nowrap; color:var(--ink-2); font-family:'IBM Plex Mono'">${m}</td>`;
     grid[mi].forEach(v=>{
-      html += `<td title="${v==null?'':fmtEUR2(v)+'/MWh'}" style="width:26px; height:20px; background:${heatColor(v)}; border:1px solid var(--bg)"></td>`;
+      html += `<td title="${v==null?'':fmtEUR2(v)+'/MWh'}" style="height:20px; background:${heatColor(v)}; border:1px solid var(--bg)"></td>`;
     });
     html += '</tr>';
   });
