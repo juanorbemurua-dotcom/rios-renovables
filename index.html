@@ -410,7 +410,7 @@
   <section class="tab-panel" id="panel-omie">
     <div class="kpi-row" id="kpi-omie"></div>
     <div class="card card-wide">
-      <div class="card-head"><div class="card-title">Resumen por año</div></div>
+      <div class="card-head"><div><div class="card-title">Resumen por año</div><div class="card-sub">Los meses muestran el precio medio en horas solares (amanecer–atardecer) de ese mes</div></div></div>
       <div class="table-wrap" id="omie-year-table"></div>
     </div>
     <div class="card">
@@ -982,7 +982,7 @@ function initOmie(){
     const yAvg = yPrices.reduce((a,b)=>a+b,0)/yPrices.length;
     const monthAvgs = monthNames.map((_,mi)=>{
       const mm = String(mi+1).padStart(2,'0');
-      const vals = rows.filter(r=>r.fecha.slice(5,7)===mm).map(r=>r.precio_medio).filter(v=>v!=null);
+      const vals = rows.filter(r=>r.fecha.slice(5,7)===mm).map(r=>r.precio_medio_solar).filter(v=>v!=null);
       return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
     });
     const yNeg = rows.filter(r=>r.horas.some(h=>h!=null && h<0)).length;
