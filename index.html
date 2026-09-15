@@ -981,7 +981,7 @@ function initOmie(){
     if(!byMonth[ym]) byMonth[ym] = Array.from({length:24}, ()=>({s:0,n:0}));
     r.horas.forEach((h,i)=>{ if(h!=null){ byMonth[ym][i].s += h; byMonth[ym][i].n++; } });
   });
-  const months = Object.keys(byMonth).sort();
+  const months = Object.keys(byMonth).sort().reverse();
   let allVals = [];
   const grid = months.map(m=> byMonth[m].map(c=> c.n? c.s/c.n : null));
   grid.forEach(row=>row.forEach(v=>{ if(v!=null) allVals.push(v); }));
