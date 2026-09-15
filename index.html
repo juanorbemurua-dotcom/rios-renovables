@@ -414,10 +414,6 @@
       <div class="table-wrap" id="omie-year-table"></div>
     </div>
     <div class="card">
-      <div class="card-head"><div><div class="card-title">Precio medio diario — Mercado Diario OMIE</div><div class="card-sub">€/MWh, media de las 24 horas de cada día</div></div></div>
-      <div class="chart-wrap tall"><canvas id="chart-omie-diario"></canvas></div>
-    </div>
-    <div class="card">
       <div class="card-head"><div><div class="card-title">Precio medio por hora y mes</div><div class="card-sub">€/MWh — se ve el hundimiento del precio en horas solares en los meses más recientes</div></div></div>
       <div id="omie-heatmap"></div>
     </div>
@@ -996,11 +992,6 @@ function initOmie(){
   });
   yearTableHtml += '</tbody></table>';
   document.getElementById('omie-year-table').innerHTML = yearTableHtml;
-
-  const labels = omie.map(r=>r.fecha);
-  renderLineChart('chart-omie-diario', labels, omie.map(r=>r.precio_medio), {
-    yFmt: v=>v, tooltipFmt: v=>fmtEUR2(v)+'/MWh', maxTicks:12
-  });
 
   // heatmap mes x hora
   const byMonth = {};
