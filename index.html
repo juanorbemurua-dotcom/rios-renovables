@@ -973,12 +973,20 @@ function initOmie(){
   omie.forEach(r=>{ const y = r.fecha.slice(0,4); (byYear[y] = byYear[y] || []).push(r); });
   const years = Object.keys(byYear).sort().reverse();
   let yearTableHtml = '<table id="tabla-omie-anual"><thead><tr><th>Año</th><th class="num">Días</th><th class="num">Precio medio</th>' +
-    '<th class="num">Precio máximo diario</th><th class="num">Días con hora en negativo</th></tr></thead><tbody>';
+    '<th class="num">Precio máximo diario</th><th class="num">Precio máximo en horas solares</th><th class="num">Días con hora en negativo</th></tr></thead><tbody>';
   years.forEach((y,yi)=>{
     const rows = byYear[y];
     const yPrices = rows.map(r=>r.precio_medio).filter(v=>v!=null);
     const yAvg = yPrices.reduce((a,b)=>a+b,0)/yPrices.length;
     const yMax = Math.max(...yPrices);
+    let yMaxSolar = -Infinity;
+    rows.forEach(r=>{
+      if(r.hora_sol_ini!=null && r.hora_sol_fin!=null){
+        for(let i=r.hora_sol_ini; i<=r.hora_sol_fin; i++){
+          if(i>=0 && i<24 && r.horas[i]!=null && r.horas[i]>yMaxSolar) yMaxSolar = r.horas[i];
+        }
+      }
+    });
     const yNeg = rows.filter(r=>r.horas.some(h=>h!=null && h<0)).length;
     const pct = (yNeg/rows.length*100).toFixed(1);
     yearTableHtml += `<tr${yi===0?' class="row-current"':''}>` +
@@ -986,6 +994,7 @@ function initOmie(){
       `<td class="num">${rows.length}</td>` +
       `<td class="num" style="font-weight:700; color:var(--accent-strong)">${fmtEUR2(yAvg)}<span style="color:var(--muted); font-weight:500">/MWh</span></td>` +
       `<td class="num">${fmtEUR2(yMax)}<span style="color:var(--muted)">/MWh</span></td>` +
+      `<td class="num">${isFinite(yMaxSolar)?fmtEUR2(yMaxSolar):'—'}<span style="color:var(--muted)">/MWh</span></td>` +
       `<td class="num">${yNeg} <span style="display:inline-block; min-width:44px; padding:1px 6px; border-radius:999px; background:var(--surface-2); color:var(--muted); font-size:10.5px">${pct}%</span></td></tr>`;
   });
   yearTableHtml += '</tbody></table>';
