@@ -406,6 +406,10 @@
 
   <section class="tab-panel" id="panel-omie">
     <div class="kpi-row" id="kpi-omie"></div>
+    <div class="card card-wide">
+      <div class="card-head"><div class="card-title">Resumen por año</div></div>
+      <div class="table-wrap" id="omie-year-table"></div>
+    </div>
     <div class="card">
       <div class="card-head"><div><div class="card-title">Precio medio diario — Mercado Diario OMIE</div><div class="card-sub">€/MWh, media de las 24 horas de cada día</div></div></div>
       <div class="chart-wrap tall"><canvas id="chart-omie-diario"></canvas></div>
@@ -965,16 +969,20 @@ function initOmie(){
   const byYear = {};
   omie.forEach(r=>{ const y = r.fecha.slice(0,4); (byYear[y] = byYear[y] || []).push(r); });
   const years = Object.keys(byYear).sort().reverse();
+  let yearTableHtml = '<table><thead><tr><th>Año</th><th class="num">Días</th><th class="num">Precio medio</th>' +
+    '<th class="num">Precio máximo diario</th><th class="num">Días con hora en negativo</th></tr></thead><tbody>';
   years.forEach(y=>{
     const rows = byYear[y];
     const yPrices = rows.map(r=>r.precio_medio).filter(v=>v!=null);
     const yAvg = yPrices.reduce((a,b)=>a+b,0)/yPrices.length;
     const yMax = Math.max(...yPrices);
     const yNeg = rows.filter(r=>r.horas.some(h=>h!=null && h<0)).length;
-    kpi(kpiEl, 'Precio medio '+y, fmtEUR2(yAvg)+'/MWh', rows.length+' días', 'accent');
-    kpi(kpiEl, 'Precio máximo diario '+y, fmtEUR2(yMax)+'/MWh');
-    kpi(kpiEl, 'Días con hora en negativo '+y, yNeg, ((yNeg/rows.length*100).toFixed(1))+'% de los días', 'critical');
+    yearTableHtml += `<tr><td class="td-bold">${y}</td><td class="num">${rows.length}</td>` +
+      `<td class="num">${fmtEUR2(yAvg)}/MWh</td><td class="num">${fmtEUR2(yMax)}/MWh</td>` +
+      `<td class="num">${yNeg} <span style="color:var(--muted)">(${(yNeg/rows.length*100).toFixed(1)}%)</span></td></tr>`;
   });
+  yearTableHtml += '</tbody></table>';
+  document.getElementById('omie-year-table').innerHTML = yearTableHtml;
 
   const labels = omie.map(r=>r.fecha);
   renderLineChart('chart-omie-diario', labels, omie.map(r=>r.precio_medio), {
