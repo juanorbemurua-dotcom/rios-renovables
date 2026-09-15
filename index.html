@@ -985,26 +985,32 @@ function initOmie(){
   let allVals = [];
   const grid = months.map(m=> byMonth[m].map(c=> c.n? c.s/c.n : null));
   grid.forEach(row=>row.forEach(v=>{ if(v!=null) allVals.push(v); }));
-  const vmin = Math.min(...allVals), vmax = Math.max(...allVals);
+  // bandas fijas en €/MWh (no relativas al rango de datos): precio bajo/negativo = rojo (malo
+  // para el productor) hasta precio alto = verde oscuro (bueno)
+  const bands = [
+    {max:1.2, color:'#d03b3b', label:'≤ 1,2'},
+    {max:10,  color:'#e2843d', label:'1,3 – 10'},
+    {max:40,  color:'#d9b23c', label:'10 – 40'},
+    {max:60,  color:'#6fae4e', label:'40 – 60'},
+    {max:Infinity, color:'#2f7d32', label:'> 60'},
+  ];
   function heatColor(v){
     if(v==null) return 'transparent';
-    const t = (v - vmin) / (vmax - vmin || 1);
-    // sequential blue ramp light->dark (reference palette steps)
-    const stops = ['#cde2fb','#9ec5f4','#5598e7','#2a78d6','#184f95','#0d366b'];
-    const idx = Math.min(stops.length-1, Math.floor(t*stops.length));
-    return stops[idx];
+    return bands.find(b=> v<=b.max).color;
   }
-  let html = '<div style="overflow-x:auto"><table style="border-collapse:collapse; font-size:10.5px; width:100%"><thead><tr><th style="text-align:left; padding:4px 8px; color:var(--muted)">Mes</th>' +
+  let html = '<div style="overflow-x:auto"><table style="border-collapse:collapse; font-size:10.5px"><thead><tr><th style="text-align:left; padding:4px 6px; color:var(--muted); white-space:nowrap">Mes</th>' +
     Array.from({length:24},(_,h)=>`<th style="padding:2px 3px; color:var(--muted); font-weight:500">${h}h</th>`).join('') + '</tr></thead><tbody>';
   months.forEach((m,mi)=>{
-    html += `<tr><td style="padding:3px 8px; white-space:nowrap; color:var(--ink-2); font-family:'IBM Plex Mono'">${m}</td>`;
+    html += `<tr><td style="padding:3px 6px; white-space:nowrap; color:var(--ink-2); font-family:'IBM Plex Mono'">${m}</td>`;
     grid[mi].forEach(v=>{
       html += `<td title="${v==null?'':fmtEUR2(v)+'/MWh'}" style="width:26px; height:20px; background:${heatColor(v)}; border:1px solid var(--bg)"></td>`;
     });
     html += '</tr>';
   });
   html += '</tbody></table></div>';
-  html += `<div class="note">Escala: <span style="display:inline-block;width:10px;height:10px;background:#cde2fb;vertical-align:middle;margin-left:4px"></span> ${fmtEUR2(vmin)} &nbsp;→&nbsp; <span style="display:inline-block;width:10px;height:10px;background:#0d366b;vertical-align:middle"></span> ${fmtEUR2(vmax)} €/MWh</div>`;
+  html += '<div class="note">Escala (€/MWh): ' + bands.map(b=>
+    `<span style="display:inline-block;width:10px;height:10px;background:${b.color};vertical-align:middle;margin-left:8px;margin-right:3px"></span>${b.label}`
+  ).join('') + '</div>';
   document.getElementById('omie-heatmap').innerHTML = html;
 
   const rows = omie.slice().reverse().map(r=>[r.fecha, ...r.horas, r.precio_medio, r.precio_medio_solar, r.hora_sol_ini, r.hora_sol_fin]);
