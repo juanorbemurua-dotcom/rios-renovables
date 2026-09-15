@@ -410,7 +410,7 @@
   <section class="tab-panel" id="panel-omie">
     <div class="kpi-row" id="kpi-omie"></div>
     <div class="card card-wide">
-      <div class="card-head"><div><div class="card-title">Resumen por año</div><div class="card-sub">Los meses muestran el precio medio en horas solares (amanecer–atardecer) de ese mes</div></div></div>
+      <div class="card-head"><div><div class="card-title">Resumen por año</div><div class="card-sub">Los meses muestran el Precio Nexus (Totalizadores) de Resumen Mensual para ese mes</div></div></div>
       <div class="table-wrap" id="omie-year-table"></div>
     </div>
     <div class="card">
@@ -966,6 +966,13 @@ function initOmie(){
   kpi(kpiEl, 'Rango de datos', fmtDate(omie[0].fecha)+' → '+fmtDate(omie[omie.length-1].fecha), omie.length+' días');
 
   const monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const mesesFull = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  // precio mensual = "Precio Nexus" (columna K de Resumen Mensual) de la fila Totalizadores,
+  // emparejado por Año + Mes Facturacion (mes real de producción)
+  const precioNexusTotal = {};
+  (DATA.nexus||[]).forEach(n=>{
+    if(n.planta === 'Totalizadores' && mesesFull.includes(n.mes)) precioNexusTotal[n.anio+'|'+n.mes] = n.precio_nexus;
+  });
   const byYear = {};
   omie.forEach(r=>{ const y = r.fecha.slice(0,4); (byYear[y] = byYear[y] || []).push(r); });
   const years = Object.keys(byYear).sort().reverse();
@@ -976,10 +983,9 @@ function initOmie(){
     const rows = byYear[y];
     const yPrices = rows.map(r=>r.precio_medio).filter(v=>v!=null);
     const yAvg = yPrices.reduce((a,b)=>a+b,0)/yPrices.length;
-    const monthAvgs = monthNames.map((_,mi)=>{
-      const mm = String(mi+1).padStart(2,'0');
-      const vals = rows.filter(r=>r.fecha.slice(5,7)===mm).map(r=>r.precio_medio_solar).filter(v=>v!=null);
-      return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+    const monthAvgs = mesesFull.map(mf=>{
+      const v = precioNexusTotal[y+'|'+mf];
+      return v==null ? null : v;
     });
     const yNeg = rows.filter(r=>r.horas.some(h=>h!=null && h<0)).length;
     const pct = (yNeg/rows.length*100).toFixed(1);
