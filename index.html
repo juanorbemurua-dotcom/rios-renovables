@@ -976,15 +976,22 @@ function initOmie(){
 
   // heatmap mes x hora
   const byMonth = {};
+  const monthDays = {};
   omie.forEach(r=>{
     const ym = r.fecha.slice(0,7);
-    if(!byMonth[ym]) byMonth[ym] = Array.from({length:24}, ()=>({s:0,n:0,low:0}));
+    if(!byMonth[ym]) byMonth[ym] = Array.from({length:24}, ()=>({s:0,n:0,low:0,sun:0}));
+    monthDays[ym] = (monthDays[ym]||0) + 1;
     r.horas.forEach((h,i)=>{ if(h!=null){ byMonth[ym][i].s += h; byMonth[ym][i].n++; if(h<1.2) byMonth[ym][i].low++; } });
+    if(r.hora_sol_ini!=null && r.hora_sol_fin!=null){
+      for(let i=r.hora_sol_ini; i<=r.hora_sol_fin; i++){ if(i>=0 && i<24) byMonth[ym][i].sun++; }
+    }
   });
   const months = Object.keys(byMonth).sort().reverse();
   let allVals = [];
   const grid = months.map(m=> byMonth[m].map(c=> c.n? c.s/c.n : null));
   const lowGrid = months.map(m=> byMonth[m].map(c=> c.low));
+  // hora "de día" (con producción) para ese mes: la mayoría de los días del mes tuvo sol en esa hora
+  const sunGrid = months.map(m=> byMonth[m].map(c=> c.sun > monthDays[m]/2));
   grid.forEach(row=>row.forEach(v=>{ if(v!=null) allVals.push(v); }));
   // bandas fijas en €/MWh (no relativas al rango de datos): precio bajo/negativo = rojo (malo
   // para el productor) hasta precio alto = verde oscuro (bueno)
@@ -1007,16 +1014,19 @@ function initOmie(){
     html += `<tr><td style="padding:3px 6px; white-space:nowrap; color:var(--ink-2); font-family:'IBM Plex Mono'">${m}</td>`;
     grid[mi].forEach((v,hi)=>{
       const low = lowGrid[mi][hi];
-      const tip = (v==null?'':fmtEUR2(v)+'/MWh') + (low>0 ? ` — ${low} día${low===1?'':'s'} < 1,2€` : '');
+      const isSun = sunGrid[mi][hi];
+      const tip = (v==null?'':fmtEUR2(v)+'/MWh') + (isSun ? ' — hora de sol' : '') + (low>0 ? ` — ${low} día${low===1?'':'s'} < 1,2€` : '');
       const num = low>0 ? `<span style="color:#fff; font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,.65)">${low}</span>` : '';
-      html += `<td title="${tip}" style="height:20px; text-align:center; background:${heatColor(v)}; border:1px solid var(--bg)">${num}</td>`;
+      const hatch = (isSun && v!=null) ? 'background-image:repeating-linear-gradient(45deg, rgba(255,255,255,.4) 0, rgba(255,255,255,.4) 1px, transparent 1px, transparent 4px);' : '';
+      html += `<td title="${tip}" style="height:20px; text-align:center; background-color:${heatColor(v)}; ${hatch} border:1px solid var(--bg)">${num}</td>`;
     });
     html += '</tr>';
   });
   html += '</tbody></table></div>';
   html += '<div class="note">Escala (€/MWh): ' + bands.map(b=>
     `<span style="display:inline-block;width:10px;height:10px;background:${b.color};vertical-align:middle;margin-left:8px;margin-right:3px"></span>${b.label}`
-  ).join('') + ' — el número en la celda es la cantidad de días de ese mes con esa hora por debajo de 1,2€/MWh.</div>';
+  ).join('') + ' — el número en la celda es la cantidad de días de ese mes con esa hora por debajo de 1,2€/MWh. ' +
+    '<span style="display:inline-block;width:14px;height:10px;vertical-align:middle;margin-left:8px;margin-right:3px;background-color:#5598e7;background-image:repeating-linear-gradient(45deg, rgba(255,255,255,.4) 0, rgba(255,255,255,.4) 1px, transparent 1px, transparent 4px)"></span>horas con sol (producción) ese mes.</div>';
   document.getElementById('omie-heatmap').innerHTML = html;
 
   const rows = omie.slice().reverse().map(r=>[r.fecha, ...r.horas, r.precio_medio, r.precio_medio_solar, r.hora_sol_ini, r.hora_sol_fin]);
