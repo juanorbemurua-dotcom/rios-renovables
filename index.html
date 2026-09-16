@@ -260,7 +260,8 @@
   #tabla-omie th:nth-last-child(-n+2), #tabla-omie td:nth-last-child(-n+2){ width:58px; }
   #tabla-omie tbody tr.month-b td{ background:var(--row-stripe); }
   #tabla-omie tbody tr.month-b:hover td{ background:var(--surface-2); }
-  #tabla-omie td.price-low{ background:var(--price-low) !important; color:#fff !important; font-weight:700; }
+  #tabla-omie td.price-low{ background-color:var(--price-low) !important; color:#fff !important; font-weight:700; }
+  #tabla-omie td.hora-sol{ background-image:repeating-linear-gradient(45deg, rgba(255,255,255,.55) 0, rgba(255,255,255,.55) 2px, transparent 2px, transparent 5px) !important; }
   .pager{ display:flex; justify-content:space-between; align-items:center; margin-top:10px; font-size:12px; color:var(--muted); }
   .pager button{ background:var(--surface-2); border:1px solid var(--border-strong); color:var(--ink); border-radius:4px; padding:6px 12px; cursor:pointer; font-size:12px; font-family:"IBM Plex Sans"; }
   .pager button:disabled{ opacity:.4; cursor:default; }
@@ -422,6 +423,7 @@
       <div class="controls"><input type="search" id="omie-search" placeholder="Buscar fecha (AAAA-MM-DD)…"></div>
       <div class="table-wrap"><table id="tabla-omie"><thead></thead><tbody></tbody></table></div>
       <div class="pager" id="pager-omie"></div>
+      <div class="note"><span style="display:inline-block;width:14px;height:10px;vertical-align:middle;margin-right:3px;background-color:var(--surface-2);background-image:repeating-linear-gradient(45deg, rgba(255,255,255,.55) 0, rgba(255,255,255,.55) 2px, transparent 2px, transparent 5px)"></span>horas con sol (producción) de ese día.</div>
     </div>
   </section>
 
@@ -1056,7 +1058,13 @@ function initOmie(){
 
   const rows = omie.slice().reverse().map(r=>[r.fecha, ...r.horas, r.precio_medio, r.precio_medio_solar, r.hora_sol_ini, r.hora_sol_fin]);
   const cols = [{label:'Fecha', fmt:fmtDate}].concat(
-    Array.from({length:24},(_,h)=>({label:String(h).padStart(2,'0')+'h', numeric:true, fmt:v=>v==null?'—':fmtNum(v), cls:v=>(v!=null && v<1.2)?'price-low':''}))
+    Array.from({length:24},(_,h)=>({label:String(h).padStart(2,'0')+'h', numeric:true, fmt:v=>v==null?'—':fmtNum(v),
+      cls:(v,r)=>{
+        let c = (v!=null && v<1.2) ? 'price-low' : '';
+        const hIni = r[r.length-2], hFin = r[r.length-1];
+        if(hIni!=null && hFin!=null && h>=hIni && h<=hFin) c += ' hora-sol';
+        return c;
+      }}))
   ).concat([
     {label:'Media', numeric:true, fmt:v=>v==null?'—':fmtEUR2(v), cls:()=>'td-bold'},
     {label:'Media Solar', numeric:true, fmt:v=>v==null?'—':fmtEUR2(v), cls:()=>'td-bold',
