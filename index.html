@@ -1143,7 +1143,7 @@ function initProduccion(){
       return [d, ...horasActivas.map(h=>horas[h]!=null?horas[h]:null), megas, precioSolar, euros];
     });
     const cols = [{label:'Fecha', fmt:fmtDate}].concat(
-      horasActivas.map(h=>({label:String(h).padStart(2,'0')+'h', numeric:true, fmt:v=>v==null?'—':fmtNum(v)}))
+      horasActivas.map(h=>({label:String(h).padStart(2,'0')+'h', numeric:true, fmt:v=>v==null?'—':fmtNum(v), cls:v=>(v!=null && v<3)?'prod-low':''}))
     ).concat([
       {label:'Producción', numeric:true, fmt:fmtMWh, cls:v=>(v!=null && v<3)?'prod-low':'td-bold'},
       {label:'Precio solar', numeric:true, fmt:v=>v==null?'—':fmtEUR2(v)},
