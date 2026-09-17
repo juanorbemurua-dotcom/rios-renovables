@@ -256,6 +256,9 @@
   #tabla-omie-anual td, #tabla-omie-anual th{ padding-top:10px; padding-bottom:10px; }
   #tabla-omie-anual thead th:first-child{ text-align:left; }
   #tabla-produccion{ font-size:11px; min-width:0; }
+  #prod-table-wrap{ max-height:70vh; overflow-y:auto; }
+  #prod-table-wrap thead th{ position:sticky; top:0; z-index:5; }
+  #tabla-produccion td.prod-low{ background-color:var(--price-low) !important; color:#fff !important; font-weight:700; }
   #tabla-omie{ table-layout:fixed; font-size:10.5px; min-width:0; }
   #tabla-omie th, #tabla-omie td{ overflow:hidden; text-overflow:ellipsis; padding-left:3px; padding-right:3px; }
   #tabla-omie th{ white-space:normal; line-height:1.2; vertical-align:bottom; }
@@ -443,8 +446,7 @@
     </div>
     <div class="card">
       <div class="card-head"><div class="card-title">Tabla diaria</div></div>
-      <div class="table-wrap"><table id="tabla-produccion"><thead></thead><tbody></tbody></table></div>
-      <div class="pager" id="pager-produccion"></div>
+      <div class="table-wrap" id="prod-table-wrap"><table id="tabla-produccion"><thead></thead><tbody></tbody></table></div>
     </div>
   </section>
 
@@ -1143,7 +1145,7 @@ function initProduccion(){
     const cols = [{label:'Fecha', fmt:fmtDate}].concat(
       horasActivas.map(h=>({label:String(h).padStart(2,'0')+'h', numeric:true, fmt:v=>v==null?'—':fmtNum(v)}))
     ).concat([
-      {label:'Producción', numeric:true, fmt:fmtMWh, cls:()=>'td-bold'},
+      {label:'Producción', numeric:true, fmt:fmtMWh, cls:v=>(v!=null && v<3)?'prod-low':'td-bold'},
       {label:'Precio solar', numeric:true, fmt:v=>v==null?'—':fmtEUR2(v)},
       {label:'Producción (€)', numeric:true, fmt:v=>v==null?'—':fmtEUR(v)},
     ]);
@@ -1151,7 +1153,7 @@ function initProduccion(){
     if(tableApi && lastHorasKey === horasKey){
       tableApi.refresh(rows);
     } else {
-      tableApi = sortableTable('tabla-produccion', cols, rows, {defaultSort:0, defaultDir:-1, pageSize:25, pagerId:'pager-produccion'});
+      tableApi = sortableTable('tabla-produccion', cols, rows, {defaultSort:0, defaultDir:-1});
       lastHorasKey = horasKey;
     }
   }
