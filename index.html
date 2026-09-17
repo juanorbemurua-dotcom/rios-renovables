@@ -440,10 +440,6 @@
       <div class="chart-wrap tall"><canvas id="chart-produccion"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-head"><div><div class="card-title">Ranking de plantas</div><div class="card-sub" id="prod-ranking-sub">Producción total del período</div></div></div>
-      <div id="prod-ranking" class="bar-list"></div>
-    </div>
-    <div class="card">
       <div class="card-head"><div class="card-title">Tabla diaria</div></div>
       <div class="table-wrap"><table id="tabla-produccion"><thead></thead><tbody></tbody></table></div>
       <div class="pager" id="pager-produccion"></div>
@@ -1110,6 +1106,9 @@ function initProduccion(){
   kpi(kpiEl, 'Día de mayor producción', fmtDate(peakDate[0]), fmtMWh(peakDate[1]), 'good');
   kpi(kpiEl, 'Plantas monitorizadas', plants.length, '');
 
+  const omieSolarByDate = {};
+  DATA.omie.forEach(r=>{ omieSolarByDate[r.fecha] = r.precio_medio_solar; });
+
   let tableApi = null;
   function refresh(){
     const plant = sel.value;
@@ -1118,15 +1117,18 @@ function initProduccion(){
     document.getElementById('prod-chart-title').textContent = 'Producción diaria — ' + (plant === '__TOTAL__' ? 'Total Dessert + Madrigal' : plant);
     renderLineChart('chart-produccion', dates, dates.map(d=>serie[d]), { tooltipFmt:v=>fmtMWh(v), maxTicks:12, color: plant==='__TOTAL__' ? 'var(--accent)' : 'var(--s-aqua)' });
 
-    const rankItems = plants.map(p=>{
-      const s = DATA.produccion_diaria[p];
-      const tot = Object.values(s).reduce((a,b)=>a+b,0);
-      return {label:p, value:tot};
-    }).sort((a,b)=>b.value-a.value);
-    barList('prod-ranking', rankItems, {fmt:fmtMWh});
-
-    const rows = dates.slice().reverse().map(d=>[d, serie[d]]);
-    const cols = [{label:'Fecha', fmt:fmtDate},{label:'Producción', numeric:true, fmt:fmtMWh}];
+    const rows = dates.slice().reverse().map(d=>{
+      const megas = serie[d];
+      const precioSolar = omieSolarByDate[d];
+      const euros = (megas!=null && precioSolar!=null) ? megas*precioSolar : null;
+      return [d, megas, precioSolar, euros];
+    });
+    const cols = [
+      {label:'Fecha', fmt:fmtDate},
+      {label:'Producción', numeric:true, fmt:fmtMWh},
+      {label:'Precio solar', numeric:true, fmt:v=>v==null?'—':fmtEUR2(v)},
+      {label:'Producción (€)', numeric:true, fmt:v=>v==null?'—':fmtEUR(v)},
+    ];
     if(tableApi) tableApi.refresh(rows);
     else tableApi = sortableTable('tabla-produccion', cols, rows, {defaultSort:0, defaultDir:-1, pageSize:25, pagerId:'pager-produccion'});
   }
