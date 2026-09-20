@@ -941,8 +941,6 @@ function initLiquidacion(){
     const netoM  = (r[40]||0) + (saldoM||0);
     return [
       r[0], L.anio, saldoD, saldoM,
-      (PL.dessert_total!=null && r[1]!=null) ? r[1]*PL.dessert_total : null,
-      (PL.madrigal_total!=null && r[2]!=null) ? r[2]*PL.madrigal_total : null,
       totalD, totalM, r[25], r[39], netoD, netoM, netoD+netoM
     ];
   };
@@ -951,8 +949,6 @@ function initLiquidacion(){
     {label:'Año', numeric:true},
     {label:'Saldo Inicial Dessert', numeric:true, fmt:v=>v==null?'—':fmtEUR(v)},
     {label:'Saldo Inicial Madrigal', numeric:true, fmt:v=>v==null?'—':fmtEUR(v)},
-    {label:`Liquidación ${PL.mes_dessert||''} Dessert`, numeric:true, fmt:v=>v==null?'—':fmtEUR(v), cls:()=>'gc-bold'},
-    {label:`Liquidación ${PL.mes_madrigal||''} Madrigal`, numeric:true, fmt:v=>v==null?'—':fmtEUR(v), cls:()=>'gc-bold'},
     {label:'Total Dessert', numeric:true, fmt:fmtEUR},
     {label:'Total Madrigal', numeric:true, fmt:fmtEUR},
     {label:'Pagado Dessert', numeric:true, fmt:fmtEUR},
@@ -962,7 +958,7 @@ function initLiquidacion(){
     {label:'Total plantas', numeric:true, fmt:fmtEUR, cls:v=>v<0?'neg':'pos'},
   ];
   const tableRows = rows.map(rowToTable);
-  sortableTable('tabla-liquidacion', cols, tableRows, {defaultSort:12});
+  sortableTable('tabla-liquidacion', cols, tableRows, {defaultSort:10});
   if(totalRow){
     const tbody = document.getElementById('tabla-liquidacion').querySelector('tbody');
     const tr = document.createElement('tr');
