@@ -933,8 +933,9 @@ function initLiquidacion(){
   // r[42]/r[43] = Saldo Inicial Dessert/Madrigal (carga manual en el Excel, cols AQ/AR) — se suma al
   // Total y al Total neto de cada lado (el saldo inicial no está "pagado" todavía)
   // Proxima liquidacion = facturacion neta del ultimo mes con datos (Dessert/Madrigal) x % de cada comunero
-  const rowToTable = r => {
-    const saldoD = r[42], saldoM = r[43];
+  const rowToTable = (r, saldoDOverride, saldoMOverride) => {
+    const saldoD = saldoDOverride!=null ? saldoDOverride : r[42];
+    const saldoM = saldoMOverride!=null ? saldoMOverride : r[43];
     const totalD = (r[8]||0)+(r[9]||0)+(r[10]||0) + (saldoD||0);
     const totalM = (r[11]||0) + (saldoM||0);
     const netoD  = (r[26]||0) + (saldoD||0);
@@ -957,13 +958,18 @@ function initLiquidacion(){
     {label:'Total neto Madrigal', numeric:true, fmt:fmtEUR, cls:v=>v<0?'neg':'pos'},
     {label:'Total plantas', numeric:true, fmt:fmtEUR, cls:v=>v<0?'neg':'pos'},
   ];
-  const tableRows = rows.map(rowToTable);
+  const tableRows = rows.map(r=>rowToTable(r));
   sortableTable('tabla-liquidacion', cols, tableRows, {defaultSort:10});
   if(totalRow){
     const tbody = document.getElementById('tabla-liquidacion').querySelector('tbody');
     const tr = document.createElement('tr');
     tr.className = 'total-row';
-    const totVals = rowToTable(totalRow);
+    // Saldo Inicial Dessert/Madrigal de la fila TOTAL = suma real de los comuneros, no el
+    // valor de la celda TOTAL del Excel (AQ29/AR29) -- esa celda puede quedar rota/circular
+    // si algún comunero tiene una fórmula fuera de lo estándar (ver CLAUDE.md).
+    const saldoDTotal = rows.reduce((s,r)=>s+(r[42]||0), 0);
+    const saldoMTotal = rows.reduce((s,r)=>s+(r[43]||0), 0);
+    const totVals = rowToTable(totalRow, saldoDTotal, saldoMTotal);
     tr.innerHTML = cols.map((c,i)=>`<td class="${c.numeric?'num':''}">${c.fmt?c.fmt(totVals[i]):totVals[i]}</td>`).join('');
     tbody.appendChild(tr);
   }
