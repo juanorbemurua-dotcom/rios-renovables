@@ -1180,12 +1180,13 @@ function initProduccion(){
       const ym = d.slice(0,7);
       if(!byMonthMW[ym]) byMonthMW[ym] = Array.from({length:24}, ()=>({s:0,n:0,low:0}));
       const horas = horaSerie[d] || [];
-      horasActivas.forEach(h=>{ if(horas[h]!=null){ byMonthMW[ym][h].s += horas[h]; byMonthMW[ym][h].n++; if(horas[h]<1) byMonthMW[ym][h].low++; } });
-      // Horas en horario solar (hora_sol_ini/fin de OMIE) con producción exactamente 0 --
-      // 0 de noche es normal, 0 de día suele ser avería/corte de la planta.
+      horasActivas.forEach(h=>{ if(horas[h]!=null){ byMonthMW[ym][h].s += horas[h]; byMonthMW[ym][h].n++; } });
+      // Horas en horario solar (hora_sol_ini/fin de OMIE, por día) con producción por
+      // debajo de 1 MW -- fuera de ese horario (madrugada) es normal, no se cuenta.
       const sol = solPorFecha[d];
       if(sol){
         for(let h=sol[0]; h<=sol[1]; h++){
+          if(h>=0 && h<24 && horas[h]!=null && horas[h]<1) byMonthMW[ym][h].low++;
           if(h>=0 && h<24 && horas[h]===0) ceroSolarPorMes[ym] = (ceroSolarPorMes[ym]||0) + 1;
         }
       }
@@ -1227,7 +1228,7 @@ function initProduccion(){
     mwHtml += '</tbody></table></div>';
     mwHtml += '<div class="note">Escala (MWh medios): ' + mwBands.map(b=>
       `<span style="display:inline-block;width:10px;height:10px;background:${b.color};vertical-align:middle;margin-left:8px;margin-right:3px"></span>${b.label}`
-    ).join('') + ' — el número blanco en la celda es la cantidad de días de ese mes con esa hora por debajo de 1 MW. ' +
+    ).join('') + ' — el número blanco en la celda es la cantidad de días de ese mes con esa hora (dentro del horario solar de cada día) por debajo de 1 MW. ' +
       '&nbsp; "Horas 0 (sol)" = horas dentro del horario solar de cada día con producción exactamente 0 (no horas nocturnas).</div>';
     document.getElementById('prod-heatmap').innerHTML = mwMax===0 ? '<div class="note">Sin datos horarios para esta selección.</div>' : mwHtml;
 
