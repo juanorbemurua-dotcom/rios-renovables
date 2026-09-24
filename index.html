@@ -1169,14 +1169,17 @@ function initProduccion(){
     // banda fija no tendría sentido acá).
     document.getElementById('prod-heatmap-title').textContent = 'Megas medios por hora y mes — ' + (plant === '__TOTAL__' ? 'Total Dessert + Madrigal' : plant);
     const byMonthMW = {};
+    const byYearMW = {};
     const ceroSolarPorMes = {};
     const mwMonthDays = {};
     dates.forEach(d=>{
       const ym = d.slice(0,7);
+      const yr = d.slice(0,4);
       if(!byMonthMW[ym]) byMonthMW[ym] = Array.from({length:24}, ()=>({s:0,n:0,low:0,sun:0}));
+      if(!byYearMW[yr]) byYearMW[yr] = Array.from({length:24}, ()=>({s:0,n:0}));
       mwMonthDays[ym] = (mwMonthDays[ym]||0) + 1;
       const horas = horaSerie[d] || [];
-      horasActivas.forEach(h=>{ if(horas[h]!=null){ byMonthMW[ym][h].s += horas[h]; byMonthMW[ym][h].n++; } });
+      horasActivas.forEach(h=>{ if(horas[h]!=null){ byMonthMW[ym][h].s += horas[h]; byMonthMW[ym][h].n++; byYearMW[yr][h].s += horas[h]; byYearMW[yr][h].n++; } });
       // Horas en horario solar (hora_sol_ini/fin de OMIE, por día) con producción por
       // debajo de 1 MW -- fuera de ese horario (madrugada) es normal, no se cuenta.
       const sol = solPorFecha[d];
@@ -1192,6 +1195,11 @@ function initProduccion(){
     });
     const mwMonths = Object.keys(byMonthMW).sort().reverse();
     const mwGrid = mwMonths.map(m=> horasActivas.map(h=> byMonthMW[m][h].n ? byMonthMW[m][h].s/byMonthMW[m][h].n : null));
+    // Fila resumen por año (pedido del usuario, 24/09/2026): promedio por hora de TODO el
+    // año, se inserta después del último mes de cada año en la tabla.
+    const mwYears = Object.keys(byYearMW).sort().reverse();
+    const mwYearGrid = {};
+    mwYears.forEach(y=>{ mwYearGrid[y] = horasActivas.map(h=> byYearMW[y][h].n ? byYearMW[y][h].s/byYearMW[y][h].n : null); });
     const mwLowGrid = mwMonths.map(m=> horasActivas.map(h=> byMonthMW[m][h].low));
     // hora "de dia" (con sol) para ese mes: la mayoria de los dias del mes tuvo esa hora
     // dentro del horario solar -- mismo criterio que el heatmap de OMIE (sunGrid).
@@ -1228,6 +1236,19 @@ function initProduccion(){
         mwHtml += `<td title="${tip}" style="height:20px; text-align:center; background-color:${mwColor(v)}; ${hatch} border:1px solid var(--bg)">${num}</td>`;
       });
       mwHtml += `<td style="text-align:center; font-family:'IBM Plex Mono'; color:${cero>0?'var(--critical)':'var(--muted)'}; font-weight:${cero>0?'700':'400'}">${cero}</td></tr>`;
+
+      // Fila resumen del año: se inserta justo después del último mes de ese año
+      // (el mes siguiente en la lista, descendente, pertenece a otro año, o no hay más).
+      const yr = m.slice(0,4);
+      const siguienteYr = mwMonths[mi+1] ? mwMonths[mi+1].slice(0,4) : null;
+      if(yr !== siguienteYr && mwYearGrid[yr]){
+        mwHtml += `<tr style="background:var(--surface-2)"><td style="padding:3px 6px; white-space:nowrap; color:var(--ink); font-weight:700; font-family:'IBM Plex Mono'">${yr}</td>`;
+        mwYearGrid[yr].forEach(v=>{
+          const tip = v==null ? '' : fmtMWh(v)+' de media en ' + yr;
+          mwHtml += `<td title="${tip}" style="height:20px; text-align:center; background-color:${mwColor(v)}; border:1px solid var(--bg); border-top:2px solid var(--ink-2); border-bottom:2px solid var(--ink-2)"></td>`;
+        });
+        mwHtml += `<td style="border-top:2px solid var(--ink-2); border-bottom:2px solid var(--ink-2)"></td></tr>`;
+      }
     });
     mwHtml += '</tbody></table></div>';
     mwHtml += '<div class="note">Escala (MWh medios): ' + mwBands.map(b=>
