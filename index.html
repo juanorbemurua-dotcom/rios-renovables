@@ -453,10 +453,6 @@
       <div class="ctl-group"><label class="ctl-label">Planta</label><select id="prod-planta"></select></div>
     </div>
     <div class="card">
-      <div class="card-head"><div><div class="card-title" id="prod-chart-title">Producción diaria</div><div class="card-sub">MWh por día</div></div></div>
-      <div class="chart-wrap tall"><canvas id="chart-produccion"></canvas></div>
-    </div>
-    <div class="card">
       <div class="card-head"><div><div class="card-title" id="prod-heatmap-title">Megas medios por hora y mes</div><div class="card-sub">MWh — se ve el pico de producción solar desplazarse a lo largo del año</div></div></div>
       <div id="prod-heatmap"></div>
     </div>
@@ -1158,8 +1154,6 @@ function initProduccion(){
     const factSerie = plant === '__TOTAL__' ? totFact : (DATA.facturacion_diaria[plant] || {});
     const horaSerie = plant === '__TOTAL__' ? totHourly : (DATA.produccion_horaria[plant] || {});
     const dates = Object.keys(serie).sort();
-    document.getElementById('prod-chart-title').textContent = 'Producción diaria — ' + (plant === '__TOTAL__' ? 'Total Dessert + Madrigal' : plant);
-    renderLineChart('chart-produccion', dates, dates.map(d=>serie[d]), { tooltipFmt:v=>fmtMWh(v), maxTicks:12, color: plant==='__TOTAL__' ? 'var(--accent)' : 'var(--s-aqua)' });
 
     // Horas con alguna produccion registrada en todo el periodo -- las que nunca producen
     // (de madrugada) se ocultan de la tabla en vez de mostrar columnas siempre en 0
