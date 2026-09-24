@@ -62,12 +62,10 @@
     --s-green: #008300;
     --s-violet: #4a3aa7;
     --s-red: #e34948;
-    --mw-1: #e5ad5d;
-    --mw-2: #dd942c;
-    --mw-3: #b8791e;
-    --mw-4: #8c5c17;
-    --mw-5: #654210;
-    --mw-6: #422b0b;
+    --mw-1: #e2a650;
+    --mw-2: #c17e1f;
+    --mw-3: #7b5014;
+    --mw-4: #422b0b;
     --row-stripe: rgba(42,120,214,0.16);
     --shadow: 0 1px 2px rgba(27,25,18,0.06), 0 6px 20px rgba(27,25,18,0.07);
   }
@@ -106,11 +104,9 @@
       --s-violet: #9085e9;
       --s-red: #e66767;
       --mw-1: #72511d;
-      --mw-2: #ab792b;
-      --mw-3: #d09943;
-      --mw-4: #dcb474;
-      --mw-5: #e7ca9d;
-      --mw-6: #f1e0c6;
+      --mw-2: #c48a31;
+      --mw-3: #dbb170;
+      --mw-4: #edd7b6;
       --row-stripe: rgba(57,135,229,0.22);
       --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 10px 28px rgba(0,0,0,0.4);
     }
@@ -149,11 +145,9 @@
     --s-violet: #9085e9;
     --s-red: #e66767;
     --mw-1: #72511d;
-    --mw-2: #ab792b;
-    --mw-3: #d09943;
-    --mw-4: #dcb474;
-    --mw-5: #e7ca9d;
-    --mw-6: #f1e0c6;
+    --mw-2: #c48a31;
+    --mw-3: #dbb170;
+    --mw-4: #edd7b6;
     --row-stripe: rgba(57,135,229,0.22);
     --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 10px 28px rgba(0,0,0,0.4);
   }
@@ -1200,10 +1194,18 @@ function initProduccion(){
     const mwGrid = mwMonths.map(m=> horasActivas.map(h=> byMonthMW[m][h].n ? byMonthMW[m][h].s/byMonthMW[m][h].n : null));
     let mwMax = 0;
     mwGrid.forEach(row=>row.forEach(v=>{ if(v!=null && v>mwMax) mwMax = v; }));
-    const mwBands = [1,2,3,4,5,6].map(i=>({max: mwMax*i/6, color: `var(--mw-${i})`}));
+    // Bandas FIJAS (no relativas al máximo de la planta) -- pedido explícito del usuario
+    // (24/09/2026): hasta 0 / 0-10 / 10-15 / más de 15 MWh de media, iguales para
+    // cualquier planta seleccionada.
+    const mwBands = [
+      {max:0,       color:'var(--mw-1)', label:'hasta 0'},
+      {max:10,      color:'var(--mw-2)', label:'0 – 10'},
+      {max:15,      color:'var(--mw-3)', label:'10 – 15'},
+      {max:Infinity,color:'var(--mw-4)', label:'> 15'},
+    ];
     function mwColor(v){
-      if(v==null || mwMax===0) return 'transparent';
-      return mwBands.find(b=> v<=b.max || b.max===mwBands[5].max).color;
+      if(v==null) return 'transparent';
+      return mwBands.find(b=> v<=b.max).color;
     }
     let mwHtml = '<div style="overflow-x:auto"><table style="border-collapse:collapse; font-size:10.5px; width:100%; table-layout:fixed">' +
       '<colgroup><col style="width:64px">' + horasActivas.map(()=>'<col>').join('') + '<col style="width:72px"></colgroup>' +
@@ -1220,8 +1222,8 @@ function initProduccion(){
       mwHtml += `<td style="text-align:center; font-family:'IBM Plex Mono'; color:${cero>0?'var(--critical)':'var(--muted)'}; font-weight:${cero>0?'700':'400'}">${cero}</td></tr>`;
     });
     mwHtml += '</tbody></table></div>';
-    mwHtml += '<div class="note">Escala (MWh medios, relativa al máximo de ' + (plant === '__TOTAL__' ? 'Total' : plant) + '): ' + mwBands.map((b,i)=>
-      `<span style="display:inline-block;width:10px;height:10px;background:${b.color};vertical-align:middle;margin-left:8px;margin-right:3px"></span>${(b.max - mwMax/6).toFixed(1)}–${b.max.toFixed(1)}`
+    mwHtml += '<div class="note">Escala (MWh medios): ' + mwBands.map(b=>
+      `<span style="display:inline-block;width:10px;height:10px;background:${b.color};vertical-align:middle;margin-left:8px;margin-right:3px"></span>${b.label}`
     ).join('') + ' &nbsp; "Horas 0 (sol)" = horas dentro del horario solar de cada día con producción exactamente 0 (no horas nocturnas).</div>';
     document.getElementById('prod-heatmap').innerHTML = mwMax===0 ? '<div class="note">Sin datos horarios para esta selección.</div>' : mwHtml;
 
