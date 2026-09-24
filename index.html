@@ -1214,8 +1214,10 @@ function initProduccion(){
       '<thead><tr><th style="text-align:left; padding:4px 6px; color:var(--muted); white-space:nowrap">Mes</th>' +
       horasActivas.map(h=>`<th style="padding:2px 3px; color:var(--muted); font-weight:500">${h}h</th>`).join('') +
       '<th style="padding:2px 6px; color:var(--muted); font-weight:500; white-space:nowrap" title="Horas en horario solar con producción exactamente 0 -- posible avería o corte">Horas 0 (sol)</th></tr></thead><tbody>';
+    let yearLowAccum = 0;
     mwMonths.forEach((m,mi)=>{
       const cero = ceroSolarPorMes[m] || 0;
+      yearLowAccum += mwLowGrid[mi].reduce((a,b)=>a+b, 0);
       mwHtml += `<tr><td style="padding:3px 6px; white-space:nowrap; color:var(--ink-2); font-family:'IBM Plex Mono'">${m}</td>`;
       mwGrid[mi].forEach((v,hi)=>{
         const low = mwLowGrid[mi][hi];
@@ -1237,7 +1239,8 @@ function initProduccion(){
           const tip = v==null ? '' : fmtMWh(v)+' de media en ' + yr;
           mwHtml += `<td title="${tip}" style="height:20px; text-align:center; background-color:${mwColor(v)}; border:1px solid var(--bg); border-top:2px solid var(--ink-2); border-bottom:2px solid var(--ink-2)"></td>`;
         });
-        mwHtml += `<td style="border-top:2px solid var(--ink-2); border-bottom:2px solid var(--ink-2)"></td></tr>`;
+        mwHtml += `<td title="Suma de los números blancos (días con esa hora < 1 MW) de todos los meses de ${yr}" style="text-align:center; font-family:'IBM Plex Mono'; font-weight:700; color:var(--ink); border-top:2px solid var(--ink-2); border-bottom:2px solid var(--ink-2)">${yearLowAccum}</td></tr>`;
+        yearLowAccum = 0;
       }
     });
     mwHtml += '</tbody></table></div>';
@@ -1245,7 +1248,8 @@ function initProduccion(){
       `<span style="display:inline-block;width:10px;height:10px;background:${b.color};vertical-align:middle;margin-left:8px;margin-right:3px"></span>${b.label}`
     ).join('') + ' — el número blanco en la celda es la cantidad de días de ese mes con esa hora (dentro del horario solar de cada día) por debajo de 1 MW. ' +
       '<span style="display:inline-block;width:14px;height:10px;vertical-align:middle;margin-left:8px;margin-right:3px;background-color:#e2843d;background-image:repeating-linear-gradient(45deg, rgba(255,255,255,.55) 0, rgba(255,255,255,.55) 2px, transparent 2px, transparent 5px)"></span>horas con sol (dentro del horario solar) ese mes. ' +
-      '&nbsp; "Horas 0 (sol)" = horas dentro del horario solar de cada día con producción exactamente 0 (no horas nocturnas).</div>';
+      '&nbsp; "Horas 0 (sol)" = horas dentro del horario solar de cada día con producción exactamente 0 (no horas nocturnas). ' +
+      'En las filas de año, esa misma columna muestra la suma de los números blancos (días con esa hora < 1 MW) de todos los meses del año.</div>';
     document.getElementById('prod-heatmap').innerHTML = mwMax===0 ? '<div class="note">Sin datos horarios para esta selección.</div>' : mwHtml;
 
     const rows = dates.slice().reverse().map(d=>{
