@@ -62,10 +62,6 @@
     --s-green: #008300;
     --s-violet: #4a3aa7;
     --s-red: #e34948;
-    --mw-1: #00c780;
-    --mw-2: #007048;
-    --mw-3: #002e1d;
-    --mw-4: #000503;
     --row-stripe: rgba(42,120,214,0.16);
     --shadow: 0 1px 2px rgba(27,25,18,0.06), 0 6px 20px rgba(27,25,18,0.07);
   }
@@ -103,10 +99,6 @@
       --s-green: #008300;
       --s-violet: #9085e9;
       --s-red: #e66767;
-      --mw-1: #025e3f;
-      --mw-2: #05c784;
-      --mw-3: #4cfabe;
-      --mw-4: #dcfef2;
       --row-stripe: rgba(57,135,229,0.22);
       --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 10px 28px rgba(0,0,0,0.4);
     }
@@ -144,10 +136,6 @@
     --s-green: #008300;
     --s-violet: #9085e9;
     --s-red: #e66767;
-    --mw-1: #025e3f;
-    --mw-2: #05c784;
-    --mw-3: #4cfabe;
-    --mw-4: #dcfef2;
     --row-stripe: rgba(57,135,229,0.22);
     --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 10px 28px rgba(0,0,0,0.4);
   }
@@ -1207,13 +1195,15 @@ function initProduccion(){
     let mwMax = 0;
     mwGrid.forEach(row=>row.forEach(v=>{ if(v!=null && v>mwMax) mwMax = v; }));
     // Bandas FIJAS (no relativas al máximo de la planta) -- pedido explícito del usuario
-    // (24/09/2026): hasta 0 / 0-10 / 10-15 / más de 15 MWh de media, iguales para
-    // cualquier planta seleccionada.
+    // (24/09/2026): hasta 1 / 1-10 / 10-15 / más de 15 MWh de media, iguales para
+    // cualquier planta seleccionada. Misma tonalidad que el heatmap de precio de OMIE
+    // (mismos hex literales, sin variar por tema claro/oscuro, igual que allá) -- rojo
+    // para los tramos por debajo de 10 megas, a pedido del usuario.
     const mwBands = [
-      {max:1,       color:'var(--mw-1)', label:'hasta 1'},
-      {max:10,      color:'var(--mw-2)', label:'1 – 10'},
-      {max:15,      color:'var(--mw-3)', label:'10 – 15'},
-      {max:Infinity,color:'var(--mw-4)', label:'> 15'},
+      {max:1,       color:'#d03b3b', label:'hasta 1'},
+      {max:10,      color:'#e2843d', label:'1 – 10'},
+      {max:15,      color:'#d9b23c', label:'10 – 15'},
+      {max:Infinity,color:'#2f7d32', label:'> 15'},
     ];
     function mwColor(v){
       if(v==null) return 'transparent';
@@ -1254,7 +1244,7 @@ function initProduccion(){
     mwHtml += '<div class="note">Escala (MWh medios): ' + mwBands.map(b=>
       `<span style="display:inline-block;width:10px;height:10px;background:${b.color};vertical-align:middle;margin-left:8px;margin-right:3px"></span>${b.label}`
     ).join('') + ' — el número blanco en la celda es la cantidad de días de ese mes con esa hora (dentro del horario solar de cada día) por debajo de 1 MW. ' +
-      '<span style="display:inline-block;width:14px;height:10px;vertical-align:middle;margin-left:8px;margin-right:3px;background-color:#0ab87c;background-image:repeating-linear-gradient(45deg, rgba(255,255,255,.55) 0, rgba(255,255,255,.55) 2px, transparent 2px, transparent 5px)"></span>horas con sol (dentro del horario solar) ese mes. ' +
+      '<span style="display:inline-block;width:14px;height:10px;vertical-align:middle;margin-left:8px;margin-right:3px;background-color:#e2843d;background-image:repeating-linear-gradient(45deg, rgba(255,255,255,.55) 0, rgba(255,255,255,.55) 2px, transparent 2px, transparent 5px)"></span>horas con sol (dentro del horario solar) ese mes. ' +
       '&nbsp; "Horas 0 (sol)" = horas dentro del horario solar de cada día con producción exactamente 0 (no horas nocturnas).</div>';
     document.getElementById('prod-heatmap').innerHTML = mwMax===0 ? '<div class="note">Sin datos horarios para esta selección.</div>' : mwHtml;
 
