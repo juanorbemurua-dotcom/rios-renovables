@@ -1178,9 +1178,9 @@ function initProduccion(){
     const ceroSolarPorMes = {};
     dates.forEach(d=>{
       const ym = d.slice(0,7);
-      if(!byMonthMW[ym]) byMonthMW[ym] = Array.from({length:24}, ()=>({s:0,n:0}));
+      if(!byMonthMW[ym]) byMonthMW[ym] = Array.from({length:24}, ()=>({s:0,n:0,low:0}));
       const horas = horaSerie[d] || [];
-      horasActivas.forEach(h=>{ if(horas[h]!=null){ byMonthMW[ym][h].s += horas[h]; byMonthMW[ym][h].n++; } });
+      horasActivas.forEach(h=>{ if(horas[h]!=null){ byMonthMW[ym][h].s += horas[h]; byMonthMW[ym][h].n++; if(horas[h]<1) byMonthMW[ym][h].low++; } });
       // Horas en horario solar (hora_sol_ini/fin de OMIE) con producción exactamente 0 --
       // 0 de noche es normal, 0 de día suele ser avería/corte de la planta.
       const sol = solPorFecha[d];
@@ -1192,6 +1192,7 @@ function initProduccion(){
     });
     const mwMonths = Object.keys(byMonthMW).sort().reverse();
     const mwGrid = mwMonths.map(m=> horasActivas.map(h=> byMonthMW[m][h].n ? byMonthMW[m][h].s/byMonthMW[m][h].n : null));
+    const mwLowGrid = mwMonths.map(m=> horasActivas.map(h=> byMonthMW[m][h].low));
     let mwMax = 0;
     mwGrid.forEach(row=>row.forEach(v=>{ if(v!=null && v>mwMax) mwMax = v; }));
     // Bandas FIJAS (no relativas al máximo de la planta) -- pedido explícito del usuario
@@ -1215,16 +1216,19 @@ function initProduccion(){
     mwMonths.forEach((m,mi)=>{
       const cero = ceroSolarPorMes[m] || 0;
       mwHtml += `<tr><td style="padding:3px 6px; white-space:nowrap; color:var(--ink-2); font-family:'IBM Plex Mono'">${m}</td>`;
-      mwGrid[mi].forEach(v=>{
-        const tip = v==null ? '' : fmtMWh(v)+' de media';
-        mwHtml += `<td title="${tip}" style="height:20px; text-align:center; background-color:${mwColor(v)}; border:1px solid var(--bg)"></td>`;
+      mwGrid[mi].forEach((v,hi)=>{
+        const low = mwLowGrid[mi][hi];
+        const tip = (v==null?'':fmtMWh(v)+' de media') + (low>0 ? ` — ${low} día${low===1?'':'s'} < 1 MW` : '');
+        const num = low>0 ? `<span style="color:#fff; font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,.65)">${low}</span>` : '';
+        mwHtml += `<td title="${tip}" style="height:20px; text-align:center; background-color:${mwColor(v)}; border:1px solid var(--bg)">${num}</td>`;
       });
       mwHtml += `<td style="text-align:center; font-family:'IBM Plex Mono'; color:${cero>0?'var(--critical)':'var(--muted)'}; font-weight:${cero>0?'700':'400'}">${cero}</td></tr>`;
     });
     mwHtml += '</tbody></table></div>';
     mwHtml += '<div class="note">Escala (MWh medios): ' + mwBands.map(b=>
       `<span style="display:inline-block;width:10px;height:10px;background:${b.color};vertical-align:middle;margin-left:8px;margin-right:3px"></span>${b.label}`
-    ).join('') + ' &nbsp; "Horas 0 (sol)" = horas dentro del horario solar de cada día con producción exactamente 0 (no horas nocturnas).</div>';
+    ).join('') + ' — el número blanco en la celda es la cantidad de días de ese mes con esa hora por debajo de 1 MW. ' +
+      '&nbsp; "Horas 0 (sol)" = horas dentro del horario solar de cada día con producción exactamente 0 (no horas nocturnas).</div>';
     document.getElementById('prod-heatmap').innerHTML = mwMax===0 ? '<div class="note">Sin datos horarios para esta selección.</div>' : mwHtml;
 
     const rows = dates.slice().reverse().map(d=>{
