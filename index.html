@@ -1315,11 +1315,16 @@ function initGastosComunidades(){
   // Es €/MW, no una fracción -- no se muestra en porcentaje. El formateador de mes recibe
   // la fila completa (r) para decidir la unidad según "Concepto" (r[2]).
   const fmtEURMega = n => n==null||isNaN(n) ? '—' : n.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €/MW';
+  // Columna "Total" (pedido del usuario, 26/09/2026): suma de los 12 meses de la fila.
+  // Para "Gasto por mega" esto da lo mismo que Total Gastos ÷ MEGAS_COMUNIDAD (la división
+  // es lineal, sumar los cocientes mensuales equivale a dividir la suma) -- no hace falta
+  // un cálculo especial, se suma igual que para "Gastos".
   const cols = [
     {label:'Año', numeric:true},
     {label:'Comunidad'},
     {label:'Concepto'},
     ...MESES_GC.map(m=>({label:m[0].toUpperCase()+m.slice(1), numeric:true, fmt:(v,r)=> r[2]==='Gasto por mega' ? fmtEURMega(v) : fmtEUR(v)})),
+    {label:'Total', numeric:true, fmt:(v,r)=> r[2]==='Gasto por mega' ? fmtEURMega(v) : fmtEUR(v)},
   ];
 
   let tableApi = null;
@@ -1328,7 +1333,10 @@ function initGastosComunidades(){
     const filtered = data.filter(r=>
       (!anio || String(r.anio)===anio) && (!comunidad || r.comunidad===comunidad)
     );
-    const rows = filtered.map(r=>[r.anio, r.comunidad, r.concepto, ...MESES_GC.map(m=>r[m]||0)]);
+    const rows = filtered.map(r=>{
+      const meses = MESES_GC.map(m=>r[m]||0);
+      return [r.anio, r.comunidad, r.concepto, ...meses, meses.reduce((a,b)=>a+b,0)];
+    });
     if(tableApi) tableApi.refresh(rows);
     else tableApi = sortableTable('tabla-gastos-comunidades', cols, rows, {defaultSort:0, defaultDir:-1, pageSize:25, pagerId:'pager-gastos-comunidades'});
   }
