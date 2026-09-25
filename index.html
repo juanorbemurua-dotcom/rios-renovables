@@ -246,6 +246,7 @@
   td.pos{ color:var(--good); } td.neg{ color:var(--critical); }
   td.gc-bold{ font-weight:700; color:var(--accent-strong); background:var(--accent-soft); }
   td.td-bold{ font-weight:700; color:var(--ink); }
+  tr.gc-mega-row td{ font-weight:700; }
   #tabla-liquidacion{ table-layout:fixed; font-size:11px; }
   #tabla-liquidacion td{ overflow:hidden; text-overflow:ellipsis; padding-left:5px; padding-right:5px; }
   #tabla-liquidacion th{ white-space:normal; line-height:1.25; vertical-align:bottom; padding-left:5px; padding-right:5px; }
@@ -1324,7 +1325,7 @@ function initGastosComunidades(){
     {label:'Comunidad'},
     {label:'Concepto'},
     ...MESES_GC.map(m=>({label:m[0].toUpperCase()+m.slice(1), numeric:true, fmt:(v,r)=> r[2]==='Gasto por mega' ? fmtEURMega(v) : fmtEUR(v)})),
-    {label:'Total', numeric:true, fmt:(v,r)=> r[2]==='Gasto por mega' ? fmtEURMega(v) : fmtEUR(v)},
+    {label:'Total', numeric:true, fmt:(v,r)=> r[2]==='Gasto por mega' ? fmtEURMega(v) : fmtEUR(v), cls:()=>'td-bold'},
   ];
 
   let tableApi = null;
@@ -1338,7 +1339,7 @@ function initGastosComunidades(){
       return [r.anio, r.comunidad, r.concepto, ...meses, meses.reduce((a,b)=>a+b,0)];
     });
     if(tableApi) tableApi.refresh(rows);
-    else tableApi = sortableTable('tabla-gastos-comunidades', cols, rows, {defaultSort:0, defaultDir:-1, pageSize:25, pagerId:'pager-gastos-comunidades'});
+    else tableApi = sortableTable('tabla-gastos-comunidades', cols, rows, {defaultSort:0, defaultDir:-1, pageSize:25, pagerId:'pager-gastos-comunidades', rowClass:r=> r[2]==='Gasto por mega' ? 'gc-mega-row' : ''});
   }
   selAnio.onchange = refresh;
   selComunidad.onchange = refresh;
