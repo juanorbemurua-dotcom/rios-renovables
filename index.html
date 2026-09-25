@@ -1194,17 +1194,31 @@ function initProduccion(){
     const mwSunGrid = mwMonths.map(m=> horasActivas.map(h=> byMonthMW[m][h].sun > mwMonthDays[m]/2));
     let mwMax = 0;
     mwGrid.forEach(row=>row.forEach(v=>{ if(v!=null && v>mwMax) mwMax = v; }));
-    // Bandas FIJAS (no relativas al máximo de la planta) -- pedido explícito del usuario
-    // (24/09/2026): hasta 1 / 1-10 / 10-15 / más de 15 MWh de media, iguales para
-    // cualquier planta seleccionada. Misma tonalidad que el heatmap de precio de OMIE
-    // (mismos hex literales, sin variar por tema claro/oscuro, igual que allá) -- rojo
-    // para los tramos por debajo de 10 megas, a pedido del usuario.
-    const mwBands = [
-      {max:1,       color:'#d03b3b', label:'hasta 1'},
-      {max:10,      color:'#e2843d', label:'1 – 10'},
-      {max:15,      color:'#6fae4e', label:'10 – 15'},
-      {max:Infinity,color:'#2f7d32', label:'> 15'},
+    // Bandas DINÁMICAS por selección (pedido del usuario, 25/09/2026, reemplaza las bandas
+    // fijas de 24/09/2026): M = máximo de los promedios hora×año (mwYearGrid) de la planta
+    // seleccionada actualmente -- se recalcula solo al cambiar de planta porque mwYearGrid
+    // ya es propio de esa selección. Paso S = M/4 -> 4 tramos iguales (1–S, S–2S, 2S–3S,
+    // >3S) más un 5º tramo fijo "hasta 1 MW" insertado al principio (pedido explícito,
+    // igual que antes). Colores: misma paleta de 5 tonos que el heatmap de precio OMIE
+    // (bands, más arriba), rojo->verde oscuro en el mismo orden. Si M es tan chico que
+    // algún tramo queda vacío/no-creciente (p.ej. S<=1), se descarta ese tramo en vez de
+    // romper el orden -- se degrada solo, sin quedar con umbrales fuera de orden.
+    let mwYearMax = 0;
+    mwYears.forEach(y=> mwYearGrid[y].forEach(v=>{ if(v!=null && v>mwYearMax) mwYearMax = v; }));
+    const mwStep = mwYearMax / 4;
+    const mwPalette = ['#d03b3b', '#e2843d', '#d9b23c', '#6fae4e', '#2f7d32'];
+    const mwRawBands = [
+      {max:1,           label:'hasta 1'},
+      {max:mwStep,      label:`1 – ${mwStep.toFixed(1)}`},
+      {max:mwStep*2,    label:`${mwStep.toFixed(1)} – ${(mwStep*2).toFixed(1)}`},
+      {max:mwStep*3,    label:`${(mwStep*2).toFixed(1)} – ${(mwStep*3).toFixed(1)}`},
+      {max:Infinity,    label:`> ${(mwStep*3).toFixed(1)}`},
     ];
+    const mwBands = [];
+    mwRawBands.forEach((b,i)=>{
+      const prevMax = mwBands.length ? mwBands[mwBands.length-1].max : -Infinity;
+      if(b.max > prevMax) mwBands.push({max:b.max, color:mwPalette[i], label:b.label});
+    });
     function mwColor(v){
       if(v==null) return 'transparent';
       return mwBands.find(b=> v<=b.max).color;
