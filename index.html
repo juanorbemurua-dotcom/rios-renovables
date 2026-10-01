@@ -1337,6 +1337,20 @@ function initGastosComunidades(){
     if(!mesesPorGrupo[key]) mesesPorGrupo[key] = new Set();
     MESES_GC.forEach(m=>{ if(r[m]!=null) mesesPorGrupo[key].add(m); });
   });
+  // Tope adicional (corregido 01/10/2026, a pedido del usuario): el divisor nunca puede
+  // superar los MESES DE CALENDARIO ya transcurridos del año -- sin esto, una fila como
+  // "alquiler" (que carga 0 explícito en meses futuros, ver más abajo) podía inflar
+  // mesesPorGrupo con meses que ni siquiera pasaron todavía. Año en curso = mes actual - 1
+  // (hoy, con el mes actual sin terminar, no cuenta); año ya cerrado = 12 siempre.
+  const HOY = new Date();
+  const ANIO_ACTUAL = HOY.getFullYear();
+  const MES_ACTUAL_0IDX = HOY.getMonth(); // 0=enero … 9=octubre
+  function mesesTranscurridos(anio){
+    const a = parseInt(anio, 10);
+    if(a < ANIO_ACTUAL) return 12;
+    if(a > ANIO_ACTUAL) return 0;
+    return MES_ACTUAL_0IDX;
+  }
 
   // Fila "Gasto por mega" (pedido del usuario, 26/09/2026): gasto mensual de la comunidad
   // dividido entre la potencia instalada fija de sus parcelas (Dessert 22,29 MW, Madrigal
@@ -1397,7 +1411,8 @@ function initGastosComunidades(){
       // carga de una sola vez en un mes (no un gasto mensual recurrente que falte cargar
       // en el resto), así que siempre se divide entre 12.
       const esAlquiler = (r.concepto||'').trim().toLowerCase() === 'alquiler';
-      const mesesConDatos = esAlquiler ? 12 : (mesesPorGrupo[r.anio+'|'+r.comunidad]?.size || 0);
+      const mesesConDatosGrupo = mesesPorGrupo[r.anio+'|'+r.comunidad]?.size || 0;
+      const mesesConDatos = esAlquiler ? 12 : Math.min(mesesConDatosGrupo, mesesTranscurridos(r.anio));
       const eurMW = (megas && mesesConDatos) ? total/megas/mesesConDatos : null;
       return [r.anio, r.comunidad, r.concepto, ...meses, total, eurMW];
     });
