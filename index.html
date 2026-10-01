@@ -1374,7 +1374,12 @@ function initGastosComunidades(){
       // (nº de meses con dato cargado, no 12 fijo). Cuenta "con dato" por r[m] != null (0
       // SÍ cuenta como dato real, distinto de mes sin cargar -- mismo criterio que
       // extraer_datos_nexus.py usa al marcar "encontrado").
-      const mesesConDatos = MESES_GC.filter(m=>r[m]!=null).length;
+      // Excepción "alquiler" (pedido del usuario, mismo día): es un gasto ANUAL que se
+      // carga de una sola vez en un mes (no un gasto mensual recurrente que falte cargar
+      // en el resto), así que siempre se divide entre 12 -- no entre la cantidad de meses
+      // con dato, que para esta fila sería 1 y dispararía el promedio mensual x12.
+      const esAlquiler = (r.concepto||'').trim().toLowerCase() === 'alquiler';
+      const mesesConDatos = esAlquiler ? 12 : MESES_GC.filter(m=>r[m]!=null).length;
       const eurMW = (megas && mesesConDatos) ? total/megas/mesesConDatos : null;
       return [r.anio, r.comunidad, r.concepto, ...meses, total, eurMW];
     });
