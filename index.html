@@ -1324,8 +1324,15 @@ function initGastosComunidades(){
   // un mes cuenta si CUALQUIER concepto de ese grupo tiene valor ese mes -- no hace falta
   // que el concepto puntual de la fila lo tenga. Mismo divisor para todas las filas del
   // mismo año/comunidad (salvo "alquiler", que sigue siendo /12 siempre).
+  // "Gastos"/"Gasto por mega" se EXCLUYEN de este cálculo (bug real, corregido el mismo
+  // día): no son un concepto, son el total agregado que sale de Resumen Mensual, y suelen
+  // tener más meses cargados que los conceptos reales de columna D (ej. Dessert 2026:
+  // "Gastos" llega hasta octubre por la estimación del mes en curso, pero ningún concepto
+  // real -- alquiler, mantenimiento, etc. -- pasa de agosto). Incluirlas inflaba el
+  // divisor con meses sin ningún concepto real cargado.
   const mesesPorGrupo = {};
   data.forEach(r=>{
+    if(r.concepto==='Gastos' || r.concepto==='Gasto por mega') return;
     const key = r.anio + '|' + r.comunidad;
     if(!mesesPorGrupo[key]) mesesPorGrupo[key] = new Set();
     MESES_GC.forEach(m=>{ if(r[m]!=null) mesesPorGrupo[key].add(m); });
