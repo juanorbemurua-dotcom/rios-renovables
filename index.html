@@ -1333,9 +1333,13 @@ function initGastosComunidades(){
   const fmtEURMegaCompact = n => n==null||isNaN(n) ? '—' : n.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2});
   // Potencia instalada fija por comunidad (mismo dato que MEGAS_COMUNIDAD en
   // extraer_datos_nexus.py, dado por el usuario 22/09/2026 -- no sale de ninguna columna
-  // del Excel). Se usa acá también para la columna "Total ÷ Megas" (pedido del usuario
-  // 27/09/2026): el Total de CUALQUIER fila (Gastos, Gasto por mega o manual de columna D)
-  // dividido entre la potencia de la planta/comunidad a la que representa esa fila.
+  // del Excel). Se usa acá también para la columna "€/MW mes" (pedida 27/09/2026, fórmula
+  // cambiada 01/10/2026): el Total de CUALQUIER fila (Gastos, Gasto por mega o manual de
+  // columna D) dividido entre la potencia de la planta/comunidad Y entre la cantidad de
+  // meses que esa fila tiene con dato cargado -- antes (27/09-01/10/2026) era Total÷Megas
+  // a secas, que mezclaba todos los meses sin promediar (una fila con 3 meses cargados
+  // daba un número muy distinto a una con 10, aunque el gasto mensual fuera parecido). El
+  // promedio mensual real se calcula en refresh() (`mesesConDatos`), no acá.
   const MEGAS_COMUNIDAD = {'Dessert':22.29, 'Madrigal':8.40};
   // Columna "Total" (pedido del usuario, 26/09/2026): suma de los 12 meses de la fila.
   // Para "Gasto por mega" esto da lo mismo que Total Gastos ÷ MEGAS_COMUNIDAD (la división
@@ -1352,7 +1356,7 @@ function initGastosComunidades(){
     {label:'Concepto', cls:()=>'concepto-trunc', title:true},
     ...MESES_GC.map(m=>({label:MES_ABREV[m], numeric:true, fmt:(v,r)=> r[2]==='Gasto por mega' ? fmtEURMegaCompact(v) : fmtEURCompact(v)})),
     {label:'Total (€)', numeric:true, fmt:(v,r)=> r[2]==='Gasto por mega' ? fmtEURMegaCompact(v) : fmtEURCompact(v), cls:()=>'td-bold'},
-    {label:'€/MW', numeric:true, fmt:fmtEURMegaCompact, cls:()=>'td-bold'},
+    {label:'€/MW mes', numeric:true, fmt:fmtEURMegaCompact, cls:()=>'td-bold'},
   ];
 
   let tableApi = null;
@@ -1365,7 +1369,14 @@ function initGastosComunidades(){
       const meses = MESES_GC.map(m=>r[m]||0);
       const total = meses.reduce((a,b)=>a+b,0);
       const megas = MEGAS_COMUNIDAD[r.comunidad];
-      return [r.anio, r.comunidad, r.concepto, ...meses, total, megas ? total/megas : null];
+      // "€/MW" pedido el 01/10/2026 (antes era Total÷Megas a secas, mezclando todos los
+      // meses cargados sin promediar) -- ahora es un promedio MENSUAL real: Total÷Megas÷
+      // (nº de meses con dato cargado, no 12 fijo). Cuenta "con dato" por r[m] != null (0
+      // SÍ cuenta como dato real, distinto de mes sin cargar -- mismo criterio que
+      // extraer_datos_nexus.py usa al marcar "encontrado").
+      const mesesConDatos = MESES_GC.filter(m=>r[m]!=null).length;
+      const eurMW = (megas && mesesConDatos) ? total/megas/mesesConDatos : null;
+      return [r.anio, r.comunidad, r.concepto, ...meses, total, eurMW];
     });
     if(tableApi) tableApi.refresh(rows);
     else tableApi = sortableTable('tabla-gastos-comunidades', cols, rows, {defaultSort:0, defaultDir:-1, pageSize:25, pagerId:'pager-gastos-comunidades', rowClass:r=> r[2]==='Gasto por mega' ? 'gc-mega-row' : ''});
