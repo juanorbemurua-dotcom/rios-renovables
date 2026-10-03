@@ -407,7 +407,7 @@
       <div class="chart-wrap"><canvas id="chart-nexus-neta"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-head"><div class="card-title">Detalle mensual — <span id="nexus-table-planta"></span></div><div class="card-sub">Megas en MWh · Precio en €/MWh · el resto en €.</div></div>
+      <div class="card-head"><div class="card-title">Detalle mensual — <span id="nexus-table-planta"></span></div><div class="card-sub">Megas en MWh · Precio en €/MWh · el resto en €.<span id="nexus-proy-nota" style="color:var(--warning);font-weight:600"></span></div></div>
       <div class="table-wrap" id="nexus-table-wrap"><table id="tabla-nexus"><thead></thead><tbody></tbody></table></div>
     </div>
   </section>
@@ -770,13 +770,21 @@ function initNexus(){
   const nexusDataRaw = DATA.nexus.filter(r => r.mes !== 'TOTAL' && !String(r.mes).startsWith('PROY'));
   const DESSERT_MIEMBROS = ['Arabayona','Burgo de Osma 1','Burgo de Osma 2','Villamayor'];
   const nexusData = nexusDataRaw;
-  // Filas de proyección del mes en curso (Excel las marca "PROY <mes>") -- solo se
-  // muestran a partir del día DIAS_MIN_PROY del mes (antes, con 1-4 días de dato real,
-  // el factor de escala es demasiado ruidoso — ver memoria 03/09/2026)
-  const proyData = DATA.mostrar_proyeccion_mes_actual
-    ? DATA.nexus.filter(r => String(r.mes).startsWith('PROY'))
-        .map(r => ({...r, mes: String(r.mes).replace(/^PROY\s*/,'').trim(), esProyeccion:true}))
-    : [];
+  // Filas de proyección del mes en curso (Excel las marca "PROY <mes>") -- se muestran
+  // siempre, pero antes del día DIAS_MIN_PROY (mostrar_proyeccion_mes_actual=false) van
+  // marcadas como PROVISIONALES con los días de dato real en que se basan: con 1-4 días el
+  // factor de escala es muy ruidoso (pedido del usuario 03/10/2026: verla igual, avisada)
+  const proyData = DATA.nexus.filter(r => String(r.mes).startsWith('PROY'))
+    .map(r => ({...r, mes: String(r.mes).replace(/^PROY\s*/,'').trim(), esProyeccion:true}));
+  const proyProvisional = !DATA.mostrar_proyeccion_mes_actual;
+  const proyDias = DATA.nexus_actualizado ? Number(String(DATA.nexus_actualizado).slice(8,10)) : null;
+  const proyLabel = proyProvisional
+    ? `Proyección provisional${proyDias ? ` (${proyDias} día${proyDias===1?'':'s'} de datos)` : ''}`
+    : 'Proyección';
+  const proyNota = document.getElementById('nexus-proy-nota');
+  if(proyNota) proyNota.textContent = (proyProvisional && proyData.length)
+    ? ` ⚠ La fila resaltada del mes en curso es una proyección PROVISIONAL basada en ${proyDias||'pocos'} día${proyDias===1?'':'s'} de datos de Nexus — muy poco fiable hasta el día 5.`
+    : '';
   const plantas = [...new Set(nexusDataRaw.map(r=>r.planta))].sort();
   const plantasReales = plantas.filter(p=>p!=='Totalizadores' && p!=='Dessert' && !DESSERT_MIEMBROS.includes(p));
   const anios = [...new Set(nexusDataRaw.map(r=>r.anio))].sort();
@@ -856,7 +864,7 @@ function initNexus(){
       if(proyRowsForChart.length){
         const arr = new Array(12).fill(null);
         proyRowsForChart.forEach(r=>{ arr[MESES.indexOf(r.mes)] = r[field]; });
-        series['Proyección'] = arr;
+        series[proyLabel] = arr;
       }
       return series;
     }
