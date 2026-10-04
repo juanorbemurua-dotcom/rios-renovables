@@ -488,7 +488,7 @@
       </select></div>
     </div>
     <div class="card card-wide">
-      <div class="card-head"><div><div class="card-title">Electricidad vs. gas</div><div class="card-sub">€/MWh · Electricidad: precio day-ahead OMIE España (media del día y media de las horas de sol) · Gas: MIBGAS PVB day-ahead (gas para entrega ese día)</div></div></div>
+      <div class="card-head"><div><div class="card-title">Electricidad vs. gas</div><div class="card-sub">€/MWh · Electricidad: precio day-ahead OMIE España (media del día y media de las horas de sol) · Gas: MIBGAS PVB day-ahead (gas para entrega ese día) · Precio solar capturado: facturación ÷ producción real de Arabayona, Burgo de Osma 1-2, Villamayor y Madrigal</div></div></div>
       <div class="chart-wrap tall"><canvas id="chart-gas"></canvas></div>
     </div>
     <div class="card card-wide">
@@ -1498,7 +1498,19 @@ function initGastosComunidades(){
 function initGas(){
   const gasPorFecha = {};
   (DATA.gas||[]).forEach(g=>{ gasPorFecha[g.fecha] = g.precio; });
-  const diario = DATA.omie.map(r=>({ fecha:r.fecha, elec:r.precio_medio, solar:r.precio_medio_solar, gas: gasPorFecha[r.fecha] ?? null }))
+  // precio solar capturado de Dessert + Madrigal = facturación / producción (OMIE hora a hora
+  // ponderado por la producción real, igual que "Precio solar" de la pestaña Producción)
+  const PLANTAS_CAPT = ['Arabayona','Burgo de Osma 1','Burgo de Osma 2','Villamayor','Madrigal'];
+  const sumaPlantas = (serie, f) => {
+    let t = 0, n = 0;
+    PLANTAS_CAPT.forEach(p=>{ const v = ((DATA[serie]||{})[p]||{})[f]; if(v!=null){ t += v; n++; } });
+    return n ? t : null;
+  };
+  const diario = DATA.omie.map(r=>{
+    const fact = sumaPlantas('facturacion_diaria', r.fecha), prod = sumaPlantas('produccion_diaria', r.fecha);
+    return { fecha:r.fecha, elec:r.precio_medio, solar:r.precio_medio_solar, gas: gasPorFecha[r.fecha] ?? null,
+      fact, prod, capt: (fact!=null && prod>0) ? fact/prod : null };
+  })
     .filter(r=>r.elec!=null || r.gas!=null);
   const kpiEl = document.getElementById('kpi-gas');
   if(!diario.length || !(DATA.gas||[]).length){ kpi(kpiEl, 'Gas', 'Sin datos', 'Falta gas_precios.json (descargar_gas.py)'); return; }
@@ -1535,7 +1547,11 @@ function initGas(){
     else {
       const grupos = {};
       rows.forEach(r=>{ const k=claveDe(r.fecha); (grupos[k] = grupos[k]||[]).push(r); });
-      filas = Object.keys(grupos).sort().map(k=>({ fecha:k, elec:avg(grupos[k].map(r=>r.elec)), solar:avg(grupos[k].map(r=>r.solar)), gas:avg(grupos[k].map(r=>r.gas)) }));
+      const suma = arr => arr.reduce((a,b)=>a+(b||0),0);
+      filas = Object.keys(grupos).sort().map(k=>{
+        const g = grupos[k], fact = suma(g.map(r=>r.capt!=null?r.fact:0)), prod = suma(g.map(r=>r.capt!=null?r.prod:0));
+        return { fecha:k, elec:avg(g.map(r=>r.elec)), solar:avg(g.map(r=>r.solar)), gas:avg(g.map(r=>r.gas)), capt: prod>0 ? fact/prod : null };
+      });
     }
     const fmtClave = v => modo==='mes' ? fmtMesLbl(v) : (modo==='semana' ? 'Sem. '+fmtDate(v) : fmtDate(v));
     const etiquetas = filas.map(r=> fmtClave(r.fecha));
@@ -1543,6 +1559,7 @@ function initGas(){
       {label:'Electricidad (media del día)', data: filas.map(r=>r.elec), color:'--s-blue', width:3},
       {label:'Gas (MIBGAS PVB)', data: filas.map(r=>r.gas), color:'--s-aqua', width:3},
       {label:'Electricidad (horas de sol)', data: filas.map(r=>r.solar), color:'--s-orange', width:1.5, dash:[5,4]},
+      {label:'Precio solar capturado (Dessert + Madrigal)', data: filas.map(r=>r.capt), color:'--s-violet', width:2.5},
       // línea de referencia fija en 50 €/MWh (pedido del usuario 04/10/2026; antes 45)
       {label:'Referencia 50 €/MWh', data: filas.map(()=>50), color:'--s-red', width:2},
     ], {yFmt:v=>fmtNum(v), tooltipFmt:v=>fmtEUR2(v)+'/MWh'});
@@ -1565,8 +1582,9 @@ function initGas(){
       {label:'Gas', numeric:true, fmt:fmtEUR2},
       {label:'Electricidad / Gas', numeric:true, fmt:fmtRatio},
       {label:'Horas de sol / Gas', numeric:true, fmt:fmtRatio},
+      {label:'Precio solar capturado', numeric:true, fmt:fmtEUR2},
     ];
-    const tRows = filas.slice().reverse().map(r=>[r.fecha, r.elec, r.solar, r.gas, (r.elec!=null&&r.gas)? r.elec/r.gas : null, (r.solar!=null&&r.gas)? r.solar/r.gas : null]);
+    const tRows = filas.slice().reverse().map(r=>[r.fecha, r.elec, r.solar, r.gas, (r.elec!=null&&r.gas)? r.elec/r.gas : null, (r.solar!=null&&r.gas)? r.solar/r.gas : null, r.capt]);
     // la cabecera cambia con "Agrupar": se recrea la tabla entera en vez de refresh()
     sortableTable('tabla-gas', cols, tRows, {defaultSort:0, defaultDir:-1, pageSize:31, pagerId:'pager-gas'});
   }
