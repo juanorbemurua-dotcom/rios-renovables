@@ -484,12 +484,16 @@
         <option value="90">Últimos 3 meses</option><option value="365" selected>Últimos 12 meses</option><option value="all">Todo</option>
       </select></div>
       <div class="ctl-group"><label class="ctl-label">Agrupar</label><select id="gas-agrupar">
-        <option value="dia">Diario</option><option value="mes">Mensual</option>
+        <option value="dia">Diario</option><option value="semana" selected>Semanal</option><option value="mes">Mensual</option>
       </select></div>
     </div>
     <div class="card card-wide">
       <div class="card-head"><div><div class="card-title">Electricidad vs. gas</div><div class="card-sub">€/MWh · Electricidad: precio day-ahead OMIE España (media del día y media de las horas de sol) · Gas: MIBGAS PVB day-ahead (gas para entrega ese día)</div></div></div>
       <div class="chart-wrap tall"><canvas id="chart-gas"></canvas></div>
+    </div>
+    <div class="card card-wide">
+      <div class="card-head"><div><div class="card-title">Diferencia electricidad − gas</div><div class="card-sub">€/MWh · media del día de la electricidad menos el gas · <span style="display:inline-block;width:10px;height:10px;background:var(--s-blue);vertical-align:middle;margin:0 3px 0 4px"></span>la electricidad está por encima del gas · <span style="display:inline-block;width:10px;height:10px;background:var(--s-aqua);vertical-align:middle;margin:0 3px 0 4px"></span>el gas está por encima</div></div></div>
+      <div class="chart-wrap"><canvas id="chart-gas-dif"></canvas></div>
     </div>
     <div class="card card-wide">
       <div class="card-head"><div><div class="card-title">Tabla comparativa</div><div class="card-sub">€/MWh · "Electricidad / Gas" = cuántas veces el precio de la electricidad multiplica el del gas</div></div></div>
@@ -672,7 +676,7 @@ function renderMultiLineChart(canvasId, labels, series, opts={}){
   const ctx = document.getElementById(canvasId).getContext('2d');
   const datasets = series.map(sr => ({
     label: sr.label, data: sr.data, borderColor: cssVar(sr.color), backgroundColor: cssVar(sr.color),
-    borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.15, spanGaps: true, fill: false,
+    borderWidth: sr.width || 2, borderDash: sr.dash || [], pointRadius: 0, pointHoverRadius: 4, tension: 0.2, spanGaps: true, fill: false,
   }));
   CHARTS[canvasId] = new Chart(ctx, {
     type:'line',
@@ -1519,20 +1523,41 @@ function initGas(){
   function refresh(){
     let rows = diario;
     if(perSel.value !== 'all') rows = rows.slice(-(+perSel.value));
+    const modo = agrSel.value;
+    // clave de agrupación: mes "AAAA-MM" o lunes de la semana "AAAA-MM-DD"
+    const claveDe = f => {
+      if(modo === 'mes') return f.slice(0,7);
+      const d = new Date(f+'T12:00:00'); d.setDate(d.getDate() - ((d.getDay()+6)%7));
+      return d.toISOString().slice(0,10);
+    };
     let filas;
-    if(agrSel.value === 'mes'){
-      const porMes = {};
-      rows.forEach(r=>{ const k=r.fecha.slice(0,7); (porMes[k] = porMes[k]||[]).push(r); });
-      filas = Object.keys(porMes).sort().map(k=>({ fecha:k, elec:avg(porMes[k].map(r=>r.elec)), solar:avg(porMes[k].map(r=>r.solar)), gas:avg(porMes[k].map(r=>r.gas)) }));
-    } else filas = rows;
-    const etiquetas = filas.map(r=> agrSel.value==='mes' ? fmtMesLbl(r.fecha) : fmtDate(r.fecha));
+    if(modo === 'dia') filas = rows;
+    else {
+      const grupos = {};
+      rows.forEach(r=>{ const k=claveDe(r.fecha); (grupos[k] = grupos[k]||[]).push(r); });
+      filas = Object.keys(grupos).sort().map(k=>({ fecha:k, elec:avg(grupos[k].map(r=>r.elec)), solar:avg(grupos[k].map(r=>r.solar)), gas:avg(grupos[k].map(r=>r.gas)) }));
+    }
+    const fmtClave = v => modo==='mes' ? fmtMesLbl(v) : (modo==='semana' ? 'Sem. '+fmtDate(v) : fmtDate(v));
+    const etiquetas = filas.map(r=> fmtClave(r.fecha));
     renderMultiLineChart('chart-gas', etiquetas, [
-      {label:'Electricidad (media del día)', data: filas.map(r=>r.elec), color:'--s-blue'},
-      {label:'Electricidad (horas de sol)', data: filas.map(r=>r.solar), color:'--s-orange'},
-      {label:'Gas (MIBGAS PVB)', data: filas.map(r=>r.gas), color:'--s-aqua'},
+      {label:'Electricidad (media del día)', data: filas.map(r=>r.elec), color:'--s-blue', width:3},
+      {label:'Gas (MIBGAS PVB)', data: filas.map(r=>r.gas), color:'--s-aqua', width:3},
+      {label:'Electricidad (horas de sol)', data: filas.map(r=>r.solar), color:'--s-orange', width:1.5, dash:[5,4]},
     ], {yFmt:v=>fmtNum(v), tooltipFmt:v=>fmtEUR2(v)+'/MWh'});
+    // diferencia electricidad - gas: color de la serie que queda por encima
+    const dif = filas.map(r=> (r.elec!=null && r.gas!=null) ? r.elec - r.gas : null);
+    if(CHARTS['chart-gas-dif']) CHARTS['chart-gas-dif'].destroy();
+    const azul = cssVar('--s-blue'), verde = cssVar('--s-aqua');
+    CHARTS['chart-gas-dif'] = new Chart(document.getElementById('chart-gas-dif').getContext('2d'), {
+      type:'bar',
+      data:{ labels: etiquetas, datasets:[{ data: dif, backgroundColor: dif.map(v=> v!=null && v<0 ? verde : azul), borderRadius:2, maxBarThickness: 26 }] },
+      options: baseChartOptions({
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c => (c.raw>=0 ? 'Electricidad por encima: +' : 'Gas por encima: ') + fmtEUR2(c.raw)+'/MWh' }, backgroundColor: cssVar('--chart-surface'), titleColor: cssVar('--chart-ink'), bodyColor: cssVar('--chart-ink-2'), borderColor: cssVar('--chart-axis'), borderWidth:1, padding:10 } },
+        scales:{ x:{ grid:{display:false}, ticks:{ color: cssVar('--chart-ink-2'), maxTicksLimit: 12, font:{family:'IBM Plex Mono', size:10.5} } }, y:{ grid:{color: c => c.tick.value===0 ? cssVar('--chart-axis') : cssVar('--chart-grid'), lineWidth: c => c.tick.value===0 ? 1.5 : 1}, border:{display:false}, ticks:{ color: cssVar('--chart-ink-2'), font:{family:'IBM Plex Mono', size:10.5}, callback: v => fmtNum(v) } } }
+      })
+    });
     const cols = [
-      {label: agrSel.value==='mes' ? 'Mes' : 'Fecha', fmt: v=> agrSel.value==='mes' ? fmtMesLbl(v) : fmtDate(v)},
+      {label: modo==='mes' ? 'Mes' : (modo==='semana' ? 'Semana' : 'Fecha'), fmt: v=> fmtClave(v)},
       {label:'Electricidad media', numeric:true, fmt:fmtEUR2},
       {label:'Electricidad horas de sol', numeric:true, fmt:fmtEUR2},
       {label:'Gas', numeric:true, fmt:fmtEUR2},
