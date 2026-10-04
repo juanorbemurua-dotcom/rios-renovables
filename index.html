@@ -1543,6 +1543,8 @@ function initGas(){
       {label:'Electricidad (media del día)', data: filas.map(r=>r.elec), color:'--s-blue', width:3},
       {label:'Gas (MIBGAS PVB)', data: filas.map(r=>r.gas), color:'--s-aqua', width:3},
       {label:'Electricidad (horas de sol)', data: filas.map(r=>r.solar), color:'--s-orange', width:1.5, dash:[5,4]},
+      // línea de referencia fija en 45 €/MWh (pedido del usuario 04/10/2026)
+      {label:'Referencia 45 €/MWh', data: filas.map(()=>45), color:'--s-red', width:2},
     ], {yFmt:v=>fmtNum(v), tooltipFmt:v=>fmtEUR2(v)+'/MWh'});
     // diferencia electricidad - gas: color de la serie que queda por encima
     const dif = filas.map(r=> (r.elec!=null && r.gas!=null) ? r.elec - r.gas : null);
