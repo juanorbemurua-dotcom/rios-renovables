@@ -200,7 +200,9 @@
 
   /* ---- Cards ---- */
   .card{ background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:20px 22px; margin-bottom:20px; box-shadow:var(--shadow); }
-  .card-wide{ width:96vw; max-width:1900px; margin-left:calc(-50vw + 50%); margin-right:calc(-50vw + 50%); }
+  /* centrada respecto a la ventana (antes calc(-50vw + 50%) la pegaba al borde izquierdo y, con la
+     barra de scroll, quedaba 5 px cortada) */
+  .card-wide{ width:96vw; max-width:1900px; margin-left:calc(50% - min(48vw, 950px)); margin-right:calc(50% - min(48vw, 950px)); }
   .card-head{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
   .card-title{ font-size:15px; font-weight:700; color:var(--ink); font-family:"IBM Plex Sans"; letter-spacing:0; }
   .card-sub{ font-size:12px; color:var(--muted); }
@@ -316,10 +318,79 @@
   #aviso-factura button{ padding:8px 14px; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; font-family:'IBM Plex Sans',sans-serif; border:1px solid var(--border-strong); background:var(--surface-2); color:var(--ink); }
   #aviso-factura button.primary{ background:var(--accent); border-color:var(--accent-strong); color:#1B1400; }
 
+  /* ===== Movil (13/10/2026, pedido del usuario: web amigable en movil sin tocar el PC) =====
+     Todo va dentro de este media query, asi el escritorio queda exactamente igual. */
   @media (max-width:680px){
+    header.top{ padding:14px 14px 12px; }
+    .brand-kicker{ font-size:10px; margin-bottom:4px; }
     .brand-title{ font-size:24px; }
-    main{ padding:16px; }
-    .bar-row{ grid-template-columns:110px 1fr 60px; }
+    .brand-sub{ font-size:12px; }
+    .snapshot-chip{ width:100%; padding:8px 12px; gap:10px; font-size:11.5px; justify-content:space-between; flex-wrap:wrap; }
+    .tabs-inner{ padding:8px 10px; gap:4px; scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch; }
+    .tab-btn{ padding:7px 12px; font-size:12.5px; scroll-snap-align:start; }
+    main{ padding:12px 10px 90px; }
+    /* KPIs en dos columnas y compactos: antes iban de uno en uno y habia que bajar varias pantallas */
+    .kpi-row{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-bottom:14px; }
+    .kpi{ padding:10px 11px; }
+    .kpi-label{ font-size:9.5px; letter-spacing:.05em; margin-bottom:3px; }
+    .kpi-val{ font-size:17px; overflow-wrap:anywhere; line-height:1.2; }
+    .kpi-sub{ font-size:10.5px; }
+    /* tarjetas a todo el ancho (el truco 96vw del escritorio no hace falta aqui) */
+    .card{ padding:14px 12px; margin-bottom:14px; }
+    .card-wide{ width:auto; margin-left:0; margin-right:0; }
+    .card-title{ font-size:14px; }
+    .card-sub{ font-size:11px; }
+    .chart-wrap{ height:230px; }
+    .chart-wrap.tall{ height:270px; }
+    /* selectores a todo el ancho */
+    .controls{ gap:8px; }
+    .controls .ctl-group{ flex:1 1 100%; min-width:0; }
+    .controls select, .controls input[type=search]{ flex:1 1 0; width:0; min-width:0; max-width:100%; font-size:14px; padding:9px 10px; text-overflow:ellipsis; }
+    label.ctl-label{ min-width:62px; }
+    /* tablas anchas: ancho natural con scroll lateral (antes se comprimian y cortaban cifras),
+       primera columna fija para no perder la referencia al desplazar */
+    .table-wrap{ -webkit-overflow-scrolling:touch; }
+    #tabla-liquidacion{ table-layout:auto; min-width:880px; }
+    #tabla-liquidacion td{ overflow:visible; text-overflow:clip; }
+    #tabla-liquidacion th:first-child, #tabla-liquidacion td:first-child{ width:auto; max-width:132px; overflow:hidden; text-overflow:ellipsis; }
+    #tabla-omie{ table-layout:auto; min-width:1080px; }
+    #tabla-omie th, #tabla-omie td{ overflow:visible; }
+    #tabla-nexus{ min-width:640px; }
+    #tabla-gastos-comunidades{ min-width:900px; font-size:11px; }
+    #tabla-gastos-comunidades thead th{ font-size:9.5px; }
+    #tabla-liquidacion td:first-child, #tabla-liquidacion th:first-child,
+    #tabla-omie td:first-child, #tabla-omie th:first-child,
+    #tabla-produccion td:first-child, #tabla-produccion th:first-child,
+    #tabla-nexus td:first-child, #tabla-nexus th:first-child,
+    #tabla-gas td:first-child, #tabla-gas th:first-child,
+    #tabla-gastos-comunidades td:first-child, #tabla-gastos-comunidades th:first-child,
+    #tabla-titularidad td:first-child, #tabla-titularidad th:first-child{
+      position:sticky; left:0; z-index:3; box-shadow:2px 0 0 var(--border);
+    }
+    .table-wrap tbody td:first-child{ background-color:var(--surface); }
+    .table-wrap thead th:first-child{ z-index:6; }
+    /* mapas de calor mes x hora: a tamano legible con scroll lateral y la columna Mes fija */
+    #omie-heatmap > div, #prod-heatmap > div{ -webkit-overflow-scrolling:touch; }
+    #omie-heatmap table, #prod-heatmap table{ min-width:760px; }
+    #omie-heatmap td:first-child, #omie-heatmap th:first-child,
+    #prod-heatmap td:first-child, #prod-heatmap th:first-child{
+      position:sticky; left:0; z-index:2; background-color:var(--surface); box-shadow:2px 0 0 var(--border);
+    }
+    .note{ font-size:11px; }
+    .bar-row{ grid-template-columns:118px 1fr 64px; gap:6px; }
+    .bar-name{ font-size:11.5px; }
+    .bar-val{ font-size:11px; }
+    .pager{ flex-wrap:wrap; gap:8px; }
+    .pager button{ padding:8px 14px; font-size:13px; }
+    /* boton "Actualizar datos" (solo web local): redondo y solo icono para no tapar contenido */
+    #btnActualizar{ bottom:14px !important; right:14px !important; padding:13px !important; border-radius:50% !important; }
+    #btnActualizar .btn-txt{ display:none; }
+    /* aviso de factura nueva */
+    #aviso-factura{ padding:10px; align-items:flex-end; }
+    #aviso-factura .af-box{ padding:16px 14px 14px; max-height:85vh; width:100%; }
+    #aviso-factura h2{ font-size:20px; }
+    #aviso-factura table{ font-size:12px; }
+    #aviso-factura .af-actions button{ flex:1 1 auto; padding:11px 12px; }
   }
 </style>
 </head>
