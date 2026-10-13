@@ -286,6 +286,10 @@
   #tabla-omie td.no-sol{ background-color:#fff !important; color:#333 !important; }
   #tabla-omie td.sol{ background-color:#d9d9dc !important; color:#242426 !important; }
   #tabla-omie td.price-low{ background-color:var(--price-low) !important; color:#fff !important; font-weight:700; }
+  /* sin sitio ni con enteros: ancho natural + scroll lateral, fecha fija (lo pone calcOmieDec) */
+  #tabla-omie.omie-scroll{ table-layout:auto; min-width:1080px; }
+  #tabla-omie.omie-scroll th, #tabla-omie.omie-scroll td{ overflow:visible; }
+  #tabla-omie.omie-scroll td:first-child, #tabla-omie.omie-scroll th:first-child{ position:sticky; left:0; z-index:3; background-color:var(--surface); box-shadow:2px 0 0 var(--border); }
   .pager{ display:flex; justify-content:space-between; align-items:center; margin-top:10px; font-size:12px; color:var(--muted); }
   .pager button{ background:var(--surface-2); border:1px solid var(--border-strong); color:var(--ink); border-radius:4px; padding:6px 12px; cursor:pointer; font-size:12px; font-family:"IBM Plex Sans"; }
   .pager button:disabled{ opacity:.4; cursor:default; }
@@ -1243,8 +1247,21 @@ function initOmie(){
   document.getElementById('omie-heatmap').innerHTML = html;
 
   const rows = omie.slice().reverse().map(r=>[r.fecha, ...r.horas, r.precio_medio, r.precio_medio_solar, r.hora_sol_ini, r.hora_sol_fin]);
+  // Decimales de los 24 precios horarios segun el ancho disponible por columna (13/10/2026, pedido
+  // del usuario: que todos los datos quepan en su casilla, quitando decimales si hace falta).
+  // >=46 px: 2 decimales; >=40: 1; >=28: enteros; menos: ancho natural con scroll lateral (1 decimal).
+  let omieDec = 2;
+  const omieTabla = document.getElementById('tabla-omie');
+  function calcOmieDec(){
+    const disp = Math.min(window.innerWidth * 0.96, 1900) - 46;   // .card-wide menos padding/borde
+    const colW = (disp - 66 - 116) / 24;                          // menos Fecha (66) y Media/Media Solar (2x58)
+    const scroll = window.innerWidth <= 680 || colW < 28;
+    omieTabla.classList.toggle('omie-scroll', scroll);
+    return scroll ? 1 : colW >= 46 ? 2 : colW >= 40 ? 1 : 0;
+  }
+  omieDec = calcOmieDec();
   const cols = [{label:'Fecha', fmt:fmtDate}].concat(
-    Array.from({length:24},(_,h)=>({label:String(h).padStart(2,'0')+'h', numeric:true, fmt:v=>v==null?'—':fmtNum(v),
+    Array.from({length:24},(_,h)=>({label:String(h).padStart(2,'0')+'h', numeric:true, fmt:v=>v==null?'—':v.toLocaleString('es-ES',{minimumFractionDigits:omieDec,maximumFractionDigits:omieDec}),
       cls:(v,r)=>{
         const hIni = r[r.length-2], hFin = r[r.length-1];
         const esSol = hIni!=null && hFin!=null && h>=hIni && h<=hFin;
@@ -1263,11 +1280,17 @@ function initOmie(){
   }
   let tableApi = sortableTable('tabla-omie', cols, rows, {defaultSort:0, defaultDir:-1, pagerId:'pager-omie', rowClass:omieRowClass});
 
+  let omieFiltradas = rows;
   document.getElementById('omie-search').oninput = e=>{
     const q = e.target.value.trim();
-    const filtered = q ? rows.filter(r=>r[0].includes(q)) : rows;
-    tableApi.refresh(filtered);
+    omieFiltradas = q ? rows.filter(r=>r[0].includes(q)) : rows;
+    tableApi.refresh(omieFiltradas);
   };
+  let omieResizeT = null;
+  window.addEventListener('resize', ()=>{
+    clearTimeout(omieResizeT);
+    omieResizeT = setTimeout(()=>{ const d = calcOmieDec(); if(d !== omieDec){ omieDec = d; tableApi.refresh(omieFiltradas); } }, 200);
+  });
 }
 
 /* ============ TAB 5: Produccion Diaria ============ */
